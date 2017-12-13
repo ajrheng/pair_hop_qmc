@@ -4,8 +4,6 @@ import traceback
 import contextlib
 import math
 import csv
-#HAHAHHAHAHAH
-#firstupdate
 class getItems():
 	def get_dat(self,dattype):
 		items = os.listdir(".")
