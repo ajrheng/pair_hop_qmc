@@ -9,7 +9,7 @@ integer,parameter :: nvx=52, ivmax=2**8 - 1
 
 integer,parameter :: ntau=100
 
-real(8) :: vv,tt,tp,mu,beta
+real(8) :: vv,tt,tp,mu,beta,vv2
 integer :: istep,mstep,nruns,equ
 
 integer :: xy(2,nn)
@@ -63,7 +63,7 @@ program main
 
   call read_params
   write(*,*)'read params'
-  write(*,*)"tt: ",tt,"tp: ",tp,"vv: ",vv,"mu: ",mu,"beta: ",beta
+  write(*,*)"tt: ",tt,"tp: ",tp,"vv: ",vv,"vv2: ",vv2,"mu: ",mu,"beta: ",beta
 
   call initran
   !if (equ.eq.0) then
@@ -224,6 +224,7 @@ open (unit=10,file='read.in',status='old')
 read(10,*)tt!1
 read(10,*)tp!start with 0
 read(10,*)vv!2,3
+read(10,*)vv2
 read(10,*)mu!2,3,4...
 read(10,*)beta!8*nx
 read(10,*)istep!10000
