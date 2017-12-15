@@ -195,7 +195,8 @@ subroutine pvect0
     s3=mod(iiq,2); iiq=iiq/2
     s4=mod(iiq,2); iiq=iiq/2
     wgt(iq)= vv*dble(s1*s2 + s2*s3 + s3*s4 + s4*s1)
-    wgt(iq)=wgt(iq) - mu*dble(s1+s2+s3+s4)/z
+    wgt(iq)= wgt(iq) + vv2*dble(s1*s3 + s2*s4)
+    wgt(iq)= wgt(iq) - mu*dble(s1+s2+s3+s4)/z
     if (wgt(iq).gt.amax) amax=wgt(iq)
  enddo
 
