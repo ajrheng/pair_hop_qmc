@@ -126,7 +126,7 @@ subroutine dupdate
             jjx=jjx+ctra(o,ss1,ss2,ss3,ss4)
             nk=nk+1
           elseif (o==4) then
-            tt1=1-ss1; tt2=ss2; tt3=1-ss3; tt4=1-ss4
+            tt1=1-ss1; tt2=ss2; tt3=ss3; tt4=1-ss4
             jjy=jjy+ctra(o,ss1,ss2,ss3,ss4)
             nk=nk+1
           elseif (o==5) then
