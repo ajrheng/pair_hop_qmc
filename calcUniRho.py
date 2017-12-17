@@ -29,6 +29,10 @@ class getItems():
 			#{ subfolder | mean |  sd }
 			if dattype == "rho":
 				individual_dir = pwd+'/'+each+'/rho.dat'
+			elif dattype == "rhot":
+				individual_dir = pwd+'/'+each+'/rhot.dat'
+			elif dattype == "rhotp":
+				individual_dir = pwd+'/'+each+'/rhotp.dat'
 			else:
 				individual_dir = pwd+'/'+each+'/uni.dat'
 			print(individual_dir)
@@ -50,7 +54,7 @@ class getItems():
 				dict_to_append["subfolder"] = int(each[3:])
 				#dict_to_append["mean"] = mean
 				#dict_to_append["sd"] = sd
-				if dattype == "rho":
+				if dattype == "rho" or "rhot" or "rhotp":
 					leftmean = self.calculate_mean(leftlist)
 					leftsd = self.standard_deviation(leftlist)
 					#dict_to_append["leftmean"] = leftmean
@@ -90,25 +94,30 @@ class getItems():
 	def construct_csv(self,array_of_calculations,pwd,dattype):
 		if dattype == "uni":
 			csv_List = [["mu","Mean","STDEV"]]
-		else:
+		elif dattype == "rho":
 			csv_List = [["mu","rho mean","STDEV"]]
+		elif dattype == "rhot":
+			csv_List = [["mu","rhot mean","STDEV"]]
+		else:
+			csv_List = [["mu","rhotp mean","STDEV"]]
 		for row in array_of_calculations:
-			if dattype == "uni":
-				csv_List.append([row['subfolder'],row['mean'],row['sd']])
-			else:
-				csv_List.append([row['subfolder'],row['mean'],row['sd']])
+			csv_List.append([row['subfolder'],row['mean'],row['sd']])
 		if dattype == "uni":
 			csvfile = pwd+'/uni.csv'
-		else:
+		elif dattype == "rho":
 			csvfile = pwd+'/rho.csv'
+		elif dattype == "rhot":
+			csvfile = pwd+'/rhot.csv'
+		else:
+			csvfile = pwd+'/rhotp.csv'
 		with open(csvfile,'w') as csvFile:
 			writer = csv.writer(csvFile)
 			writer.writerows(csv_List)
 			print ("done")
 if __name__ == "__main__":
 	while True:
-		text = input("Enter a type of .dat file (uni|rho): ")
-		if (text == "uni") or (text == "rho"):
+		text = input("Enter a type of .dat file (uni|rho|rhot|rhotp): ")
+		if (text == "uni") or (text == "rho") or (text=="rhot") or (text=="rhotp"):
 			break
 
 	getItems().get_dat(text)
