@@ -51,13 +51,13 @@ subroutine dupdate
 !==================================!
   use hyzer; use bmsr; implicit none
 
-  integer :: i,ii,j,k,q,o,b,s1,s2,s3,s4,ss1,ss2,ss3,ss4,iiq,jjq,jjx,jjy,sa,su
+  integer :: i,ii,j,k,q,o,b,s1,s2,s3,s4,ss1,ss2,ss3,ss4,iiq,jjq,jjx,jjy,sa,su,jjtx,jjty,jjtpx,jjtpy
   integer :: ns(0:3)
   real(8) :: rndm,p,addp,delp
   integer :: tt1,tt2,tt3,tt4,nu,nk,np,nh1,last,ph1,ph2,ph3,ph4
   real(8) :: ssum,sstr,ssus,dl
 
-  su=0; sa=0; jjx=0; jjy=0
+  su=0; sa=0; jjx=0; jjy=0; jjtx=0; jjty=0; jjtpx=0; jjtpy=0
   do i=1,nn
     su=su+st(i)
     sa=sa+phase(i)*st(i)
@@ -116,26 +116,32 @@ subroutine dupdate
           if (o==1) then
             tt1=1-ss1; tt2=1-ss2; tt3=ss3; tt4=ss4
             jjx=jjx+ctra(o,ss1,ss2,ss3,ss4)
+            jjtx=jjtx+ctra(o,ss1,ss2,ss3,ss4)
             nk=nk+1
           elseif (o==2) then
             tt1=ss1; tt2=1-ss2; tt3=1-ss3; tt4=ss4
             jjy=jjy+ctra(o,ss1,ss2,ss3,ss4)
+            jjty=jjty+ctra(o,ss1,ss2,ss3,ss4)
             nk=nk+1
           elseif (o==3) then
             tt1=ss1; tt2=ss2; tt3=1-ss3; tt4=1-ss4
             jjx=jjx+ctra(o,ss1,ss2,ss3,ss4)
+            jjtx=jjtx+ctra(o,ss1,ss2,ss3,ss4)
             nk=nk+1
           elseif (o==4) then
             tt1=1-ss1; tt2=ss2; tt3=ss3; tt4=1-ss4
             jjy=jjy+ctra(o,ss1,ss2,ss3,ss4)
+            jjty=jjty+ctra(o,ss1,ss2,ss3,ss4)
             nk=nk+1
           elseif (o==5) then
             tt1=1-ss1; tt2=1-ss2; tt3=1-ss3; tt4=1-ss4
             jjy=jjy+ctra(o,ss1,ss2,ss3,ss4)
+            jjtpy=jjtpy+ctra(o,ss1,ss2,ss3,ss4)
             np=np+1
           else
             tt1=1-ss1; tt2=1-ss2; tt3=1-ss3; tt4=1-ss4              
             jjx=jjx+ctra(o,ss1,ss2,ss3,ss4)
+            jjtpx=jjtpx+ctra(o,ss1,ss2,ss3,ss4)
             np=np+1
           endif             
           sa=sa+ph1*(tt1-ss1)+ph2*(tt2-ss2)+ph3*(tt3-ss3)+ph4*(tt4-ss4)
@@ -169,7 +175,10 @@ subroutine dupdate
  sxa=sxa+beta*ssus
  rhox=rhox+(dble(jjx)**2)/(dble(nn)*beta)
  rhoy=rhoy+(dble(jjy)**2)/(dble(nn)*beta)
- 
+ rhotx=rhotx+(dble(jjtx)**2)/(dble(nn)*beta)
+ rhoty=rhoty+(dble(jjty)**2)/(dble(nn)*beta)
+ rhotpx=rhotpx+(dble(jjtpx)**2)/(dble(nn)*beta)
+ rhotpy=rhotpy+(dble(jjtpy)**2)/(dble(nn)*beta)
   
 end subroutine dupdate
 !=======================================!

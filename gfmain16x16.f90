@@ -49,7 +49,7 @@ end module bgfm
 !=============================!
 module bmsr
 
-real(8),save :: avu,avk,avp,umag,sxu,ssa,sxa,rhox,rhoy
+real(8),save :: avu,avk,avp,umag,sxu,ssa,sxa,rhox,rhoy,rhotx,rhoty,rhotpx,rhotpy
  
 end module bmsr
 !============================!
@@ -110,6 +110,10 @@ subroutine writeres (nmsr)
  sxa=sxa/dble(nmsr)
  rhox=rhox/(dble(nmsr))
  rhoy=rhoy/(dble(nmsr))
+ rhotx=rhotx/(dble(nmsr))
+ rhoty=rhoty/(dble(nmsr))
+ rhotpx=rhotpx/(dble(nmsr))
+ rhotpy=rhotpy/(dble(nmsr))
 
 ! open(UNIT=10,FILE='col.dat',STATUS='unknown',ACCESS='append')
 ! write(10,*)ssx,ssy
@@ -129,6 +133,14 @@ subroutine writeres (nmsr)
 
  open(UNIT=10,FILE='rho.dat',STATUS='unknown',ACCESS='append')
  write(10,*)rhox,rhoy
+ close(10)
+
+ open(UNIT=10,FILE='rhot.dat',STATUS='unknown',ACCESS='append')
+ write(10,*)rhotx,rhoty
+ close(10)
+
+ open(UNIT=10,FILE='rhotp.dat',STATUS='unknown',ACCESS='append')
+ write(10,*)rhotpx,rhotpy
  close(10)
 
  !gfm(:,:)=0.d0

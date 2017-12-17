@@ -66,6 +66,10 @@ subroutine zerodata
  sxa=0.d0
  rhox=0.d0
  rhoy=0.d0
+ rhotx=0.d0
+ rhoty=0.d0
+ rhotpx=0.d0
+ rhotpy=0.d0
 
  ggg(:,:,:)=0.d0
 
