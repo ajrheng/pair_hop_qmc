@@ -54,7 +54,7 @@ class getItems():
 				dict_to_append["subfolder"] = int(each[3:])
 				#dict_to_append["mean"] = mean
 				#dict_to_append["sd"] = sd
-				if dattype == "rho" or "rhot" or "rhotp":
+				if dattype == "rho" or dattype == "rhot" or dattype == "rhotp":
 					leftmean = self.calculate_mean(leftlist)
 					leftsd = self.standard_deviation(leftlist)
 					#dict_to_append["leftmean"] = leftmean
