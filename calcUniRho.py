@@ -110,7 +110,7 @@ class getItems():
 
 	def get_file_name(self,pwd,dattype):
 		csvfile = "".join([pwd,'/',dattype,'.csv'])
-		
+
 		return csvfile
 
 	def construct_csv(self,array_of_calculations,pwd,dattype):
@@ -127,9 +127,10 @@ class getItems():
 			print ("done")
 
 if __name__ == "__main__":
+	accepted_inputs = ['uni','rho','rhot','rhotp']
 	while True:
 		text = input("Enter a type of .dat file (uni|rho|rhot|rhotp): ")
-		if (text == "uni") or (text == "rho") or (text=="rhot") or (text=="rhotp"):
+		if text in accepted_inputs:
 			break
 
 	getItems().get_dat(text)
