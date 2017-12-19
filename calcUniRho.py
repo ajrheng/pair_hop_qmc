@@ -5,6 +5,21 @@ import contextlib
 import math
 import csv
 class getItems():
+	def __init__(self):
+		self.possible_dattype = ['rho','rhotp','rhot']
+
+	def get_individual_type(self,pwd,each,dattype):
+		if dattype == "rho":
+			individual_dir = pwd+'/'+each+'/rho.dat'
+		elif dattype == "rhot":
+			individual_dir = pwd+'/'+each+'/rhot.dat'
+		elif dattype == "rhotp":
+			individual_dir = pwd+'/'+each+'/rhotp.dat'
+		else:
+			individual_dir = pwd+'/'+each+'/uni.dat'
+
+		return individual_dir
+
 	def get_dat(self,dattype):
 		items = os.listdir(".")
 		items_removed = []
@@ -27,16 +42,10 @@ class getItems():
 			# /Users/Alvin/Desktop/cy2001 results/varymuwhenv=5/mu=30/uni.dat
 			#each = subfolder.
 			#{ subfolder | mean |  sd }
-			if dattype == "rho":
-				individual_dir = pwd+'/'+each+'/rho.dat'
-			elif dattype == "rhot":
-				individual_dir = pwd+'/'+each+'/rhot.dat'
-			elif dattype == "rhotp":
-				individual_dir = pwd+'/'+each+'/rhotp.dat'
-			else:
-				individual_dir = pwd+'/'+each+'/uni.dat'
+			individual_dir = self.get_individual_type(pwd,each,dattype)
 			print(individual_dir)
 			dict_to_append = {}
+
 			with open (individual_dir,"r") as datfile:
 				rightlist = []
 				leftlist = []
@@ -54,7 +63,7 @@ class getItems():
 				dict_to_append["subfolder"] = int(each[3:])
 				#dict_to_append["mean"] = mean
 				#dict_to_append["sd"] = sd
-				if dattype == "rho" or dattype == "rhot" or dattype == "rhotp":
+				if dattype in self.possible_dattype:
 					leftmean = self.calculate_mean(leftlist)
 					leftsd = self.standard_deviation(leftlist)
 					#dict_to_append["leftmean"] = leftmean
@@ -71,6 +80,7 @@ class getItems():
 
 		self.construct_csv(return_list,pwd,dattype)
 
+
 	def calculate_mean(self,array_of_items):
 		length_array = len(array_of_items)
 		sum_of_items = float(0)
@@ -79,6 +89,7 @@ class getItems():
 		#here we have the combined sum,
 		mean = sum_of_items/length_array
 		return mean
+
 	def standard_deviation(self,array_of_items):
 		#calculate mean, go through all items, for each item.
 		#minus mean, square sum it divide 90
@@ -91,7 +102,8 @@ class getItems():
 		divide_of_sum = float(sum_of_squared/90)
 		sqrt_of_divided = math.sqrt(divide_of_sum)
 		return sqrt_of_divided
-	def construct_csv(self,array_of_calculations,pwd,dattype):
+
+	def get_csv_headers(self,dattype):
 		if dattype == "uni":
 			csv_List = [["mu","Mean","STDEV"]]
 		elif dattype == "rho":
@@ -100,8 +112,10 @@ class getItems():
 			csv_List = [["mu","rhot mean","STDEV"]]
 		else:
 			csv_List = [["mu","rhotp mean","STDEV"]]
-		for row in array_of_calculations:
-			csv_List.append([row['subfolder'],row['mean'],row['sd']])
+
+		return csv_List
+
+	def get_file_name(self,pwd,dattype):
 		if dattype == "uni":
 			csvfile = pwd+'/uni.csv'
 		elif dattype == "rho":
@@ -110,10 +124,22 @@ class getItems():
 			csvfile = pwd+'/rhot.csv'
 		else:
 			csvfile = pwd+'/rhotp.csv'
-		with open(csvfile,'w') as csvFile:
+
+		return csvfile
+
+	def construct_csv(self,array_of_calculations,pwd,dattype):
+		csv_List = self.get_csv_headers(dattype)
+
+		for row in array_of_calculations:
+			csv_List.append([row['subfolder'],row['mean'],row['sd']])
+		
+		csvfilename = self.get_file_name(pwd,dattype)
+		
+		with open(csvfilename,'w') as csvFile:
 			writer = csv.writer(csvFile)
 			writer.writerows(csv_List)
 			print ("done")
+
 if __name__ == "__main__":
 	while True:
 		text = input("Enter a type of .dat file (uni|rho|rhot|rhotp): ")
