@@ -9,14 +9,7 @@ class getItems():
 		self.possible_dattype = ['rho','rhotp','rhot']
 
 	def get_individual_type(self,pwd,each,dattype):
-		if dattype == "rho":
-			individual_dir = pwd+'/'+each+'/rho.dat'
-		elif dattype == "rhot":
-			individual_dir = pwd+'/'+each+'/rhot.dat'
-		elif dattype == "rhotp":
-			individual_dir = pwd+'/'+each+'/rhotp.dat'
-		else:
-			individual_dir = pwd+'/'+each+'/uni.dat'
+		individual_dir = "".join([pwd,'/',each,'/',dattype,'.dat'])
 
 		return individual_dir
 
@@ -116,15 +109,8 @@ class getItems():
 		return csv_List
 
 	def get_file_name(self,pwd,dattype):
-		if dattype == "uni":
-			csvfile = pwd+'/uni.csv'
-		elif dattype == "rho":
-			csvfile = pwd+'/rho.csv'
-		elif dattype == "rhot":
-			csvfile = pwd+'/rhot.csv'
-		else:
-			csvfile = pwd+'/rhotp.csv'
-
+		csvfile = "".join([pwd,'/',dattype,'.csv'])
+		
 		return csvfile
 
 	def construct_csv(self,array_of_calculations,pwd,dattype):
@@ -134,7 +120,7 @@ class getItems():
 			csv_List.append([row['subfolder'],row['mean'],row['sd']])
 		
 		csvfilename = self.get_file_name(pwd,dattype)
-		
+
 		with open(csvfilename,'w') as csvFile:
 			writer = csv.writer(csvFile)
 			writer.writerows(csv_List)
