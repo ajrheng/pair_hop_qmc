@@ -214,13 +214,16 @@ subroutine writeconf
  real :: mn
 
  no=0
- write(20,*)l,nh,nl
+ write(20,*)"l:",l,"nh:",nh,"nl:",nl
  do i=1,nn
-    write(20,*)st(i)
     if (st(i)==1) no=no+1
+    write(20,"(i1,a1)",advance="no")st(i)," "
+    if (mod(i,nx)==0) then
+        write(20,*)
+    endif
  enddo
  mn=no/dble(nn)
- write(20,*)"Average n:",mn
+ write(20,*)"Average density:",mn
  !do i=1,l
  !   write(20,*)gstring(i)
  !enddo
