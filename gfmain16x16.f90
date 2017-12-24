@@ -224,6 +224,7 @@ subroutine writeconf
  enddo
  mn=no/dble(nn)
  write(20,*)"Average density:",mn
+ write(20,*)"----------------------------------------"
  !do i=1,l
  !   write(20,*)gstring(i)
  !enddo
