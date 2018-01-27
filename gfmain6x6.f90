@@ -1,7 +1,6 @@
 !==============================!
 module hyzer
 save
-
 integer, parameter :: nx=6, ny=6, nn=nx*ny, nq=nn, nb=2*nn, nn2=nn*nn
 real(8), parameter :: z=4.d0 ! 2*nb/nn
 
@@ -27,7 +26,6 @@ real(8) :: vxprb(0:7,0:7,nvx)
 
 integer, allocatable :: gstring(:)
 integer, allocatable :: vert(:),link(:)
-
 integer :: nl
 real(8) :: lopers,nloops
 
@@ -188,21 +186,21 @@ end subroutine initconf
 !=====================================!
 
 !===================!
-subroutine readconf
+!subroutine readconf
 !===================!
- use hyzer; implicit none
+! use hyzer; implicit none
+!
+!integer :: i
+!
+! read(20,*)l,nh,nl
+! do i=1,nn
+!    read(20,*)st(i)
+! enddo
+! do i=1,l
+!    read(20,*)gstring(i)
+! enddo
 
- integer i
-
- read(20,*)l,nh,nl
- do i=1,nn
-    read(20,*)st(i)
- enddo
- do i=1,l
-    read(20,*)gstring(i)
- enddo
-
-end subroutine readconf
+!end subroutine readconf
 !=======================!
 
 !====================!

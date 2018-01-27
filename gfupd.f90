@@ -371,7 +371,8 @@ subroutine updloop(passed)
 !=========================!
  use blink; use hyzer; implicit none
 
- integer :: i,j,k,p0,p1,p2,n8
+ integer :: i
+ integer :: j,k,p0,p1,p2,n8
  integer :: vx,vx0,nv,nv1,ml
  integer :: ic,ic0,is,is0,vp,oc,nop,nop1
  real(8) :: r,rndm
@@ -406,7 +407,7 @@ subroutine updloop(passed)
      passed=.false.
      return
 20   lopers=lopers+dble(nv)
-    if (lopers > 100*l) exit
+!    if (lopers > 100*l) exit
   enddo
   j=0
   do i=1,l
@@ -429,7 +430,6 @@ subroutine updloop(passed)
         if (rndm().lt.0.5) st(i)= 1-st(i)
      endif
   enddo
-
   nloops=nloops+dble(nl)
   passed=.true.
 
@@ -445,10 +445,16 @@ subroutine adjnl
  integer :: nl1
 
  lopers=lopers/nloops
+ !write(*,*)'lopers: ',lopers,'nloops: ',nloops
  nl1=1+int(dble(2*l)/lopers)
  nl=(nl+nl1)/2
  lopers=0.d0
  nloops=0.d0
+ !write(*,*)'nl:',nl
+  if (nl<0) then
+    write(*,*)'nl is negative'
+    stop
+  endif
 
 end subroutine adjnl
 !===================!
@@ -458,7 +464,8 @@ subroutine updloop_gfm(passed)
 !==============================!
  use bgfm; use blink; use btau; use hyzer; implicit none
 
- integer :: i,j,k,p0,p1,p2,vx,vx0,vp,ic,ic0,oc,is,is0,nop,nop1
+ integer :: j
+ integer :: i,k,p0,p1,p2,vx,vx0,vp,ic,ic0,oc,is,is0,nop,nop1
  real(8) :: r,rndm
 
  integer :: el0,el1,el2,i0,ij,dn0,nv,ml
