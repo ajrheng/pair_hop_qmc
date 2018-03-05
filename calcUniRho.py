@@ -65,9 +65,14 @@ class getItems():
 					sd = math.sqrt(sd*sd+leftsd*leftsd)
 					dict_to_append["mean"] = mean
 					dict_to_append["sd"] = sd
-				else:
+				elif dattype == "uni":
 					dict_to_append["mean"] = mean
-					dict_to_append["sd"] = sd						
+					dict_to_append["sd"] = sd	
+				elif dattype == "stg":
+					mean = self.calculate_mean(leftlist)
+					sd = self.standard_deviation(leftlist)
+					dict_to_append["mean"] = mean
+					dict_to_append["sd"] = sd				
 
 				return_list.append(dict_to_append)
 
@@ -103,8 +108,10 @@ class getItems():
 			csv_List = [["mu","rho mean","STDEV"]]
 		elif dattype == "rhot":
 			csv_List = [["mu","rhot mean","STDEV"]]
-		else:
+		elif dattype =="rhotp":
 			csv_List = [["mu","rhotp mean","STDEV"]]
+		elif dattype == "stg":
+			csv_List = [["mu","ssa mean","STDEV"]]
 
 		return csv_List
 
@@ -127,9 +134,9 @@ class getItems():
 			print ("done")
 
 if __name__ == "__main__":
-	accepted_inputs = ['uni','rho','rhot','rhotp']
+	accepted_inputs = ['uni','rho','rhot','rhotp','stg']
 	while True:
-		text = input("Enter a type of .dat file (uni|rho|rhot|rhotp): ")
+		text = input("Enter a type of .dat file (uni|rho|rhot|rhotp|stg): ")
 		if text in accepted_inputs:
 			break
 

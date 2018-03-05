@@ -37,6 +37,8 @@ subroutine simulation
        call mcstep(1)
     enddo
     call writeres(mstep)
+    call calcCorrStr(mstep)
+    call equatestg
     open(12,file='log.txt',status='unknown',access='append')
     write(12,*)'Completed run ',i
     close(12)
@@ -45,7 +47,7 @@ subroutine simulation
     call writeconf
     close(20)
  enddo
-
+ call writestg
  deallocate(vert)
  deallocate(link)
 
@@ -55,7 +57,8 @@ end subroutine simulation
 !===================!
 subroutine zerodata
 !===================!
- use bgfm; use bmsr;
+ use bgfm; use bmsr; use hyzer; implicit none
+ integer:: dx,dy,k1,k2
 
  avu=0.d0
  avk=0.d0
@@ -70,6 +73,17 @@ subroutine zerodata
  rhoty=0.d0
  rhotpx=0.d0
  rhotpy=0.d0
+ do dx=0,nx/2
+  do dy=0,ny/2
+    corr(dx,dy)=0.d0
+  enddo
+enddo
+
+do k1=0,20
+  do k2=0,20
+    strFactTemp(k1,k2)=0.d0
+  enddo
+enddo
 
  ggg(:,:,:)=0.d0
 
@@ -142,8 +156,8 @@ subroutine lattice
 !===================!
  use hyzer; implicit none
 
- integer :: i,q,ix,iy,ix1,iy1,ix2,iy2,ix3,iy3,ix4,iy4,m
- integer :: iq,iiq,ns(0:3),xy1(0:nx-1,0:ny-1)
+ integer :: i,q,ix,iy,ix1,iy1,ix2,iy2,ix3,iy3,ix4,iy4,m,k1,k2
+ integer :: iq,iiq,ns(0:3)
 
  i=0
  m=0
@@ -182,6 +196,13 @@ subroutine lattice
     iq2ns(2,iq)=ns(2)
     iq2ns(3,iq)=ns(3)
  enddo
+
+!intialize strFact to 0
+do k1=0,20
+  do k2=0,20
+    strFact(k1,k2)=0.d0
+  enddo
+enddo
 
 end subroutine lattice
 !====================!

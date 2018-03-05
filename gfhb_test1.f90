@@ -142,11 +142,10 @@ subroutine lattice
 !===================!
  use hyzer; implicit none
 
- integer :: i,q,ix,iy,ix1,iy1,ix2,iy2,ix3,iy3,ix4,iy4,m
+ integer :: i,q,ix,iy,ix1,iy1,ix2,iy2,ix3,iy3,ix4,iy4
  integer :: iq,iiq,ns(0:3),xy1(0:nx-1,0:ny-1)
 
  i=0
- m=0
  do iy=0,ny-1
  do ix=0,nx-1
     i=i+1
@@ -165,10 +164,7 @@ subroutine lattice
     plqt(1,q)=xy1(ix2,iy2)
     plqt(2,q)=xy1(ix3,iy3)
     plqt(3,q)=xy1(ix4,iy4)
-    phase(q)=(-1)**(q+m)
-    if (mod(q,nx)==0) then
-        m=m+1
-    endif
+    phase(q)=(-1)**q
  enddo
  do iq=0,15
     iiq=iq
