@@ -73,17 +73,8 @@ subroutine zerodata
  rhoty=0.d0
  rhotpx=0.d0
  rhotpy=0.d0
- do dx=0,nx/2
-  do dy=0,ny/2
-    corr(dx,dy)=0.d0
-  enddo
-enddo
-
-do k1=0,20
-  do k2=0,20
-    strFactTemp(k1,k2)=0.d0
-  enddo
-enddo
+ corr(:,:)=0.d0
+ strFactTemp(:,:)=0.d0
 
  ggg(:,:,:)=0.d0
 
@@ -198,11 +189,7 @@ subroutine lattice
  enddo
 
 !intialize strFact to 0
-do k1=0,20
-  do k2=0,20
-    strFact(k1,k2)=0.d0
-  enddo
-enddo
+strFact(:,:)=0.d0
 
 end subroutine lattice
 !====================!

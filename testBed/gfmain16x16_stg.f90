@@ -23,7 +23,7 @@ real(8) :: amax,wgt(0:15),awgt(0:15),dwgt(0:15)
 integer :: vxoper(nvx),vxcode(0:6,0:15),vxleg(0:7,nvx)
 integer :: vxnew(0:7,0:7,nvx),op(0:6,0:15)
 integer :: vtyp(nvx),ivx(0:ivmax),vxi(nvx)
-real(8) :: vxprb(0:7,0:7,nvx),corr(0:nx/2,0:ny/2),strFactTemp(0:20,0:20),strFact(0:20,0:20)
+real(8) :: vxprb(0:7,0:7,nvx),corr(0:nx/2,0:ny/2),strFactTemp(0:100,0:100),strFact(0:100,0:100)
 !corr and strFactTemp survives between msteps, strFact writes averaged
 !strFact for whole simulation.
 
@@ -181,14 +181,14 @@ real(8) :: pi,cosk1,sink1,cosk2,sink2
 enddo
 
 pi=3.141592654
-do k1=0,20
-  do k2=0,20
+do k1=0,100
+  do k2=0,100
     do dx=0,nx/2
       do dy=0,ny/2
-        cosk1=DCOS((dble(k1)/10)*pi*dx)
-        sink1=DSIN((dble(k1)/10)*pi*dx)
-        cosk2=DCOS((dble(k2)/10)*pi*dy)
-        sink2=DSIN((dble(k2)/10)*pi*dy)
+        cosk1=DCOS((dble(k1)/50)*pi*dx)
+        sink1=DSIN((dble(k1)/50)*pi*dx)
+        cosk2=DCOS((dble(k2)/50)*pi*dy)
+        sink2=DSIN((dble(k2)/50)*pi*dy)
         strFactTemp(k1,k2)=strFactTemp(k1,k2)+((cosk1*cosk2-sink1*sink2)*corr(dx,dy))/(dble(nx*ny)/4)
       enddo
     enddo
@@ -207,8 +207,8 @@ implicit none
 
 integer :: k1,k2
 
-do k1=0,20
-  do k2=0,20
+do k1=0,100
+  do k2=0,100
     strFact(k1,k2) = strFact(k1,k2)+strFactTemp(k1,k2)/dble(nruns)
   enddo
 enddo
@@ -223,8 +223,8 @@ use hyzer; implicit none
 integer :: k1,k2
 
 open(UNIT=10,FILE='stgfull.dat',STATUS='unknown',ACCESS='append')
-do k1=0,20
-  do k2=0,20
+do k1=0,100
+  do k2=0,100
     write(10,*)strFact(k1,k2)
   enddo
 enddo
