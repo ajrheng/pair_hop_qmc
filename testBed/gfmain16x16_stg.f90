@@ -189,7 +189,7 @@ do k1=0,100
         sink1=DSIN((dble(k1)/50)*pi*dx)
         cosk2=DCOS((dble(k2)/50)*pi*dy)
         sink2=DSIN((dble(k2)/50)*pi*dy)
-        strFactTemp(k1,k2)=strFactTemp(k1,k2)+((cosk1*cosk2-sink1*sink2)*corr(dx,dy))/(dble(nx*ny)/4)
+        strFactTemp(k1,k2)=strFactTemp(k1,k2)+((cosk1*cosk2-sink1*sink2)*corr(dx,dy))/(dble(nn))
       enddo
     enddo
   enddo

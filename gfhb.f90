@@ -694,7 +694,7 @@ do i=1,nvx
             vxprb(oc,ic,i)=vxprb(oc,ic,i)+vxprb(oc-1,ic,i)!sum the probabilities so it is easier to decide vertex change or not
             !eg, vxprb(0,0,1)=0.2,vxprb(1,0,1)=0.2,vxprb(2,0,1)=0.5,vxprb(3,0,1)=0.1. total probability = 1
             !vxprb(2,0,1)=0.2+0.2+0.5=0.9. Therefore to decide if you accept going in at leg 0, exiting at leg 2 of vertex number 1,
-            !generate random number, if random number <0.9, accept it.
+            !generate random number, if random number <0.9 but >0.4, accept it. If random number is say, 0.3, then you exit by 1st leg.
         enddo
     enddo
 enddo

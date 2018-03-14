@@ -50,9 +50,12 @@ class getItems():
 					else:
 						leftlist.append(float(item))
 					counter +=1
+				if (dattype == "rho" or dattype == "rhot" or dattype == "rhotp"):
+					rightlist = [3/4*x for x in rightlist]
+					leftlist = [3/4*x for x in leftlist]
 				# we want to calculate mean here
-				mean = self.calculate_mean(rightlist)
-				sd = self.standard_deviation(rightlist)
+				rightmean = self.calculate_mean(rightlist)
+				rightsd = self.standard_deviation(rightlist)
 				dict_to_append["subfolder"] = int(each[3:])
 				#dict_to_append["mean"] = mean
 				#dict_to_append["sd"] = sd
@@ -61,18 +64,18 @@ class getItems():
 					leftsd = self.standard_deviation(leftlist)
 					#dict_to_append["leftmean"] = leftmean
 					#dict_to_append["leftsd"] = leftsd
-					mean =(mean+leftmean)/2
-					sd = math.sqrt(sd*sd+leftsd*leftsd)
+					mean =(rightmean+leftmean)/2
+					sd = math.sqrt(rightsd*rightsd+leftsd*leftsd)
 					dict_to_append["mean"] = mean
 					dict_to_append["sd"] = sd
 				elif dattype == "uni":
-					dict_to_append["mean"] = mean
-					dict_to_append["sd"] = sd	
-				elif dattype == "stg":
-					mean = self.calculate_mean(leftlist)
-					sd = self.standard_deviation(leftlist)
-					dict_to_append["mean"] = mean
-					dict_to_append["sd"] = sd				
+					dict_to_append["mean"] = rightmean
+					dict_to_append["sd"] = rightsd	
+				elif dattype == "stgpipi":
+					leftmean = self.calculate_mean(leftlist)
+					leftsd = self.standard_deviation(leftlist)
+					dict_to_append["mean"] = leftmean
+					dict_to_append["sd"] = leftsd				
 
 				return_list.append(dict_to_append)
 
@@ -110,7 +113,7 @@ class getItems():
 			csv_List = [["mu","rhot mean","STDEV"]]
 		elif dattype =="rhotp":
 			csv_List = [["mu","rhotp mean","STDEV"]]
-		elif dattype == "stg":
+		elif dattype == "stgpipi":
 			csv_List = [["mu","ssa mean","STDEV"]]
 
 		return csv_List
@@ -134,9 +137,9 @@ class getItems():
 			print ("done")
 
 if __name__ == "__main__":
-	accepted_inputs = ['uni','rho','rhot','rhotp','stg']
+	accepted_inputs = ['uni','rho','rhot','rhotp','stgpipi']
 	while True:
-		text = input("Enter a type of .dat file (uni|rho|rhot|rhotp|stg): ")
+		text = input("Enter a type of .dat file (uni|rho|rhot|rhotp|stgpipi): ")
 		if text in accepted_inputs:
 			break
 
