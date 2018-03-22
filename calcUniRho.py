@@ -22,7 +22,12 @@ class getItems():
 			# we check the first 2 letters of all directories grabbed if
 			# it starts with mu and construct a new list to put them into.
 			if x[:2] == "mu":
-				items_removed.append(int(x[3:]))
+				m=float(x[3:])
+				if m%1==0:#if it is whole number
+					items_removed.append(int(m))
+				else:#if mu has decimal eg. 13.4
+					items_removed.append(m)
+
  
 		items_removed = sorted(items_removed)
 		for index,truncated in enumerate(items_removed):
@@ -50,13 +55,13 @@ class getItems():
 					else:
 						leftlist.append(float(item))
 					counter +=1
-				if (dattype == "rho" or dattype == "rhot" or dattype == "rhotp"):
-					rightlist = [3/4*x for x in rightlist]
-					leftlist = [3/4*x for x in leftlist]
+				#if (dattype == "rho" or dattype == "rhot" or dattype == "rhotp"):
+				#	rightlist = [3/4*x for x in rightlist]
+				#	leftlist = [3/4*x for x in leftlist]
 				# we want to calculate mean here
 				rightmean = self.calculate_mean(rightlist)
 				rightsd = self.standard_deviation(rightlist)
-				dict_to_append["subfolder"] = int(each[3:])
+				dict_to_append["subfolder"] = float(each[3:])
 				#dict_to_append["mean"] = mean
 				#dict_to_append["sd"] = sd
 				if dattype in self.possible_dattype:

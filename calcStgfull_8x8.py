@@ -6,7 +6,7 @@ import math
 import csv
 class getItems():
 	def __init__(self):
-		self.possible_dattype = ['zeropi','pizero']
+		self.possible_dattype = ['zeropi','pizero','pipi']
 
 	def get_individual_type(self,pwd,each,dattype):
 		individual_dir = "".join([pwd,'/',each,'/','stgfull','.dat'])
@@ -22,7 +22,11 @@ class getItems():
 			# we check the first 2 letters of all directories grabbed if
 			# it starts with mu and construct a new list to put them into.
 			if x[:2] == "mu":
-				items_removed.append(int(x[3:]))
+				m=float(x[3:])
+				if m%1==0:#if it is whole number
+					items_removed.append(int(m))
+				else:#if mu has decimal eg. 13.4
+					items_removed.append(m)
  
 		items_removed = sorted(items_removed)
 		for index,truncated in enumerate(items_removed):
@@ -38,19 +42,21 @@ class getItems():
 			individual_dir = self.get_individual_type(pwd,each,dattype)
 			print(individual_dir)
 			dict_to_append = {}
-
+			stgList=0
 			with open (individual_dir,"r") as datfile:
 				counter = 0
 				for item in datfile:
-					if dattype== "zeropi":
-						if counter==50:
-							stgList=float(item)
-					elif dattype == "pizero":
-						if counter==101*50:
+					if dattype== "zeropi" or dattype =="pizero":
+						if counter==4:
+							stgList+=float(item)
+						if counter==36:
+							stgList+=float(item)
+					elif dattype == "pipi":
+						if counter==40:
 							stgList=float(item)
 					counter+=1
 								
-				dict_to_append["subfolder"] = int(each[3:])
+				dict_to_append["subfolder"] = float(each[3:])
 				#dict_to_append["mean"] = mean
 				#dict_to_append["sd"] = sd
 				dict_to_append["stg"] = stgList			
@@ -65,6 +71,8 @@ class getItems():
 			csv_List = [["mu","Stg(0,pi)"]]
 		elif dattype == "pizero":
 			csv_List = [["mu","Stg(pi,0)"]]
+		elif dattype =="pipi":
+			csv_List = [["mu","Stg(pi,pi)"]]
 		return csv_List
 
 	def get_file_name(self,pwd,dattype):
@@ -86,9 +94,9 @@ class getItems():
 			print ("done")
 
 if __name__ == "__main__":
-	accepted_inputs = ['zeropi','pizero']
+	accepted_inputs = ['zeropi','pizero','pipi']
 	while True:
-		text = input("Enter a type of .dat file (zeropi,pizero)): ")
+		text = input("Enter a type of .dat file (zeropi,pizero,pipi)): ")
 		if text in accepted_inputs:
 			break
 

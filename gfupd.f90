@@ -52,12 +52,13 @@ subroutine dupdate
   use hyzer; use bmsr; implicit none
 
   integer :: i,ii,j,k,q,o,b,s1,s2,s3,s4,ss1,ss2,ss3,ss4,iiq,jjq,jjx,jjy,sa,su,jjtx,jjty,jjtpx,jjtpy
-  integer :: ns(0:3)
+  integer :: ns(0:3),nms
   real(8) :: rndm,p,addp,delp
-  integer :: tt1,tt2,tt3,tt4,nu,nk,np,nh1,last,ph1,ph2,ph3,ph4
-  real(8) :: ssum,sstr,ssus,dl
+  integer :: tt1,tt2,tt3,tt4,nu,nk,np,nh1,last,ph1,ph2,ph3,ph4,qi,qj
+  real(8) :: ssum,sstr,ssus,dl,scc(1:nn,1:nn)
 
-  su=0; sa=0; jjx=0; jjy=0; jjtx=0; jjty=0; jjtpx=0; jjtpy=0
+  su=0; sa=0; jjx=0; jjy=0; jjtx=0; jjty=0; jjtpx=0; jjtpy=0;nms=0
+  scc(:,:)=0.d0!intermediate array for corr function
   do i=1,nn
     su=su+st(i)
     sa=sa+phase(i)*st(i)
@@ -153,6 +154,17 @@ subroutine dupdate
            st(plqt(k,q))=iq2ns(k,jjq)
         enddo
      endif
+      if (mod(i,8*nn).eq.1) then!update structure factor
+        nms=nms+1!separate counter
+        do qi=1,nn
+        do qj=1,nn
+          ss1=st(qi)
+          ss2=st(qj)
+          !write(*,*)ss1*ss2
+          scc(qi,qj)=scc(qi,qj)+dble(ss1*ss2)
+        enddo
+        enddo
+     endif
   enddo
 
  dl=dble(nh1-last)
@@ -165,6 +177,12 @@ subroutine dupdate
  else
     ssus=sstr
  endif
+do qi=1,nn
+  do qj=1,nn
+    corr(qi,qj)=corr(qi,qj)+scc(qi,qj)/dble(nms)
+    !write(*,*)corr(dx,dy)
+  enddo
+enddo
 
  avu=avu+dble(nu)
  avk=avk+dble(nk)!kinetic of single hop
@@ -174,12 +192,12 @@ subroutine dupdate
  sxu=sxu+beta*(dble(su)**2)/dble(nn)
  ssa=ssa+sstr
  sxa=sxa+beta*ssus
- rhox=rhox+(dble(jjx)**2)/(dble(nn)*beta)
- rhoy=rhoy+(dble(jjy)**2)/(dble(nn)*beta)
- rhotx=rhotx+(dble(jjtx)**2)/(dble(nn)*beta)
- rhoty=rhoty+(dble(jjty)**2)/(dble(nn)*beta)
- rhotpx=rhotpx+(dble(jjtpx)**2)/(dble(nn)*beta)
- rhotpy=rhotpy+(dble(jjtpy)**2)/(dble(nn)*beta)
+ rhox=rhox+3.d0/4*(dble(jjx)**2)/(dble(nn)*beta)
+ rhoy=rhoy+3.d0/4*(dble(jjy)**2)/(dble(nn)*beta)
+ rhotx=rhotx+3.d0/4*(dble(jjtx)**2)/(dble(nn)*beta)
+ rhoty=rhoty+3.d0/4*(dble(jjty)**2)/(dble(nn)*beta)
+ rhotpx=rhotpx+3.d0/4*(dble(jjtpx)**2)/(dble(nn)*beta)
+ rhotpy=rhotpy+3.d0/4*(dble(jjtpy)**2)/(dble(nn)*beta)
   
 end subroutine dupdate
 !=======================================!

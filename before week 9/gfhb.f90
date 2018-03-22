@@ -37,8 +37,6 @@ subroutine simulation
        call mcstep(1)
     enddo
     call writeres(mstep)
-    call calcCorrStr(mstep)
-    call equatestg
     open(12,file='log.txt',status='unknown',access='append')
     write(12,*)'Completed run ',i
     close(12)
@@ -47,7 +45,7 @@ subroutine simulation
     call writeconf
     close(20)
  enddo
- call writestg
+
  deallocate(vert)
  deallocate(link)
 
@@ -57,8 +55,7 @@ end subroutine simulation
 !===================!
 subroutine zerodata
 !===================!
- use bgfm; use bmsr; use hyzer; implicit none
- integer:: dx,dy,k1,k2
+ use bgfm; use bmsr;
 
  avu=0.d0
  avk=0.d0
@@ -73,8 +70,6 @@ subroutine zerodata
  rhoty=0.d0
  rhotpx=0.d0
  rhotpy=0.d0
- corr(:,:)=0.d0
- strFactTemp(:,:)=0.d0
 
  ggg(:,:,:)=0.d0
 
@@ -147,8 +142,8 @@ subroutine lattice
 !===================!
  use hyzer; implicit none
 
- integer :: i,q,ix,iy,ix1,iy1,ix2,iy2,ix3,iy3,ix4,iy4,m,k1,k2
- integer :: iq,iiq,ns(0:3)
+ integer :: i,q,ix,iy,ix1,iy1,ix2,iy2,ix3,iy3,ix4,iy4,m
+ integer :: iq,iiq,ns(0:3),xy1(0:nx-1,0:ny-1)
 
  i=0
  m=0
@@ -187,9 +182,6 @@ subroutine lattice
     iq2ns(2,iq)=ns(2)
     iq2ns(3,iq)=ns(3)
  enddo
-
-!intialize strFact to 0
-strFact(:,:)=0.d0
 
 end subroutine lattice
 !====================!
@@ -702,7 +694,7 @@ do i=1,nvx
             vxprb(oc,ic,i)=vxprb(oc,ic,i)+vxprb(oc-1,ic,i)!sum the probabilities so it is easier to decide vertex change or not
             !eg, vxprb(0,0,1)=0.2,vxprb(1,0,1)=0.2,vxprb(2,0,1)=0.5,vxprb(3,0,1)=0.1. total probability = 1
             !vxprb(2,0,1)=0.2+0.2+0.5=0.9. Therefore to decide if you accept going in at leg 0, exiting at leg 2 of vertex number 1,
-            !generate random number, if random number <0.9, accept it.
+            !generate random number, if random number <0.9 but >0.4, accept it. If random number is say, 0.3, then you exit by 1st leg.
         enddo
     enddo
 enddo

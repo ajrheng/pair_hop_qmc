@@ -54,8 +54,8 @@ subroutine dupdate
   integer :: i,ii,j,k,q,o,b,s1,s2,s3,s4,ss1,ss2,ss3,ss4,iiq,jjq,jjx,jjy,sa,su,jjtx,jjty,jjtpx,jjtpy
   integer :: ns(0:3),nms
   real(8) :: rndm,p,addp,delp
-  integer :: tt1,tt2,tt3,tt4,nu,nk,np,nh1,last,ph1,ph2,ph3,ph4,dx,dy,ix1,iy1,ix2,iy2
-  real(8) :: ssum,sstr,ssus,dl,scc(0:nx/2,0:ny/2)
+  integer :: tt1,tt2,tt3,tt4,nu,nk,np,nh1,last,ph1,ph2,ph3,ph4,qi,qj
+  real(8) :: ssum,sstr,ssus,dl,scc(1:nn,1:nn)
 
   su=0; sa=0; jjx=0; jjy=0; jjtx=0; jjty=0; jjtpx=0; jjtpy=0;nms=0
   scc(:,:)=0.d0!intermediate array for corr function
@@ -156,18 +156,12 @@ subroutine dupdate
      endif
       if (mod(i,8*nn).eq.1) then!update structure factor
         nms=nms+1!separate counter
-        do dx=0,nx/2!distance
-        do dy=0,ny/2
-           do s1=1,nn
-              ix1=xy(1,s1)!x coordinate
-              iy1=xy(2,s1)!y coordinate
-              ix2=mod(ix1+dx,nx)!x cooridnate of site that is dx away
-              iy2=mod(iy1+dy,ny)!y coordinate of site that is dy away
-              s2=xy1(ix2,iy2)!label of the spin of the new site
-              ss1=st(s1)!
-              ss2=st(s2)
-              scc(dx,dy)=scc(dx,dy)+dble(ss1*ss2)
-           enddo
+        do qi=1,nn
+        do qj=1,nn
+          ss1=st(qi)
+          ss2=st(qj)
+          !write(*,*)ss1*ss2
+          scc(qi,qj)=scc(qi,qj)+dble(ss1*ss2)
         enddo
         enddo
      endif
@@ -183,9 +177,10 @@ subroutine dupdate
  else
     ssus=sstr
  endif
-do dx=0,nx/2
-  do dy=0,ny/2
-    corr(dx,dy)=corr(dx,dy)+scc(dx,dy)/dble(nms*nn)
+do qi=1,nn
+  do qj=1,nn
+    corr(qi,qj)=corr(qi,qj)+scc(qi,qj)/dble(nms)
+    !write(*,*)corr(dx,dy)
   enddo
 enddo
 

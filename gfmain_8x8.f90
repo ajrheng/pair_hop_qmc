@@ -2,7 +2,7 @@
 module hyzer
 save
 
-integer, parameter :: nx=16, ny=16, nn=nx*ny, nq=nn, nb=2*nn, nn2=nn*nn
+integer, parameter :: nx=8, ny=8, nn=nx*ny, nq=nn, nb=2*nn, nn2=nn*nn
 real(8), parameter :: z=4.d0 ! 2*nb/nn
 
 integer,parameter :: nvx=52, ivmax=2**8 - 1
@@ -23,7 +23,7 @@ real(8) :: amax,wgt(0:15),awgt(0:15),dwgt(0:15)
 integer :: vxoper(nvx),vxcode(0:6,0:15),vxleg(0:7,nvx)
 integer :: vxnew(0:7,0:7,nvx),op(0:6,0:15)
 integer :: vtyp(nvx),ivx(0:ivmax),vxi(nvx)
-real(8) :: vxprb(0:7,0:7,nvx),corr(0:nx/2,0:ny/2),strFactTemp(0:100,0:100),strFact(0:100,0:100)
+real(8) :: vxprb(0:7,0:7,nvx),corr(1:nn,1:nn),strFactTemp(0:nx,0:nx),strFact(0:nx,0:nx)
 !corr and strFactTemp survives between msteps, strFact writes averaged
 !strFact for whole simulation.
 
@@ -171,29 +171,48 @@ end subroutine writeres
 subroutine calcCorrStr(nmsr)
 !======================================!
 use hyzer; implicit none
-integer :: dx,dy,k1,k2,nmsr
+integer :: i,j,k1,k2,nmsr,ix1,iy1,ix2,iy2!,countPlusOne, countMinusOne
 real(8) :: pi,cosk1,sink1,cosk2,sink2
 
- do dx=0,nx/2
-  do dy=0,ny/2
-    corr(dx,dy)=corr(dx,dy)/(dble(nmsr))
+ do i=1,nn
+  do j=1,nn
+    corr(i,j)=corr(i,j)/(dble(nmsr))
+    !write(*,*)"corr",i," ",j," ",corr(i,j)
   enddo
 enddo
 
+!countPlusOne=0; countMinusOne=0;
 pi=3.141592654
-do k1=0,100
-  do k2=0,100
-    do dx=0,nx/2
-      do dy=0,ny/2
-        cosk1=DCOS((dble(k1)/50)*pi*dx)
-        sink1=DSIN((dble(k1)/50)*pi*dx)
-        cosk2=DCOS((dble(k2)/50)*pi*dy)
-        sink2=DSIN((dble(k2)/50)*pi*dy)
-        strFactTemp(k1,k2)=strFactTemp(k1,k2)+((cosk1*cosk2-sink1*sink2)*corr(dx,dy))/(dble(nn))
+do k1=0,nx
+  do k2=0,nx
+    do i=1,nn
+      do j=1,nn
+        ix1=xy(1,i)
+        iy1=xy(2,i)
+        ix2=xy(1,j)
+        iy2=xy(2,j)
+        !cosk1=DCOS((dble(k1)/50)*pi*dx)
+        cosk1=DCOS(dble(k1)*2.d0*pi*dble(ix1-ix2)/dble(nx))
+        !sink1=DSIN((dble(k1)/50)*pi*dx)
+        sink1=DSIN(dble(k1)*2.d0*pi*dble(ix1-ix2)/dble(nx))
+        !cosk2=DCOS((dble(k2)/50)*pi*dy)
+        cosk2=DCOS(dble(k2)*2.d0*pi*dble(iy1-iy2)/dble(nx))
+        !sink2=DSIN((dble(k2)/50)*pi*dy)
+        sink2=DSIN(dble(k2)*2.d0*pi*dble(iy1-iy2)/dble(nx))
+        !if (k1==nx/2 .and. k2==nx/2) then
+        !  write(*,*)"cosk1",cosk1,"cosk2",cosk2,"sink1",sink1,"sink2",sink2
+        !  if (abs(cosk1*cosk2-1)<0.001) then
+        !      countPlusOne=countPlusOne+1
+        !  elseif (abs(cosk1*cosk2+1)<0.001) then
+        !      countMinusOne=countMinusOne+1
+        !  endif
+        !endif
+        strFactTemp(k1,k2)=strFactTemp(k1,k2)+(cosk1*cosk2-sink1*sink2)*corr(i,j)
       enddo
     enddo
   enddo
 enddo
+!write(*,*)"countPlusOne",countPlusOne,"countMinusOne",countMinusOne
 
 end subroutine calcCorrStr
 !=======================================!
@@ -207,9 +226,9 @@ implicit none
 
 integer :: k1,k2
 
-do k1=0,100
-  do k2=0,100
-    strFact(k1,k2) = strFact(k1,k2)+strFactTemp(k1,k2)/dble(nruns)
+do k1=0,nx
+  do k2=0,nx
+    strFact(k1,k2) = strFact(k1,k2)+strFactTemp(k1,k2)/dble(nruns*nn)
   enddo
 enddo
 
@@ -223,8 +242,8 @@ use hyzer; implicit none
 integer :: k1,k2
 
 open(UNIT=10,FILE='stgfull.dat',STATUS='unknown',ACCESS='append')
-do k1=0,100
-  do k2=0,100
+do k1=0,nx
+  do k2=0,nx
     write(10,*)strFact(k1,k2)
   enddo
 enddo
