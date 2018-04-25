@@ -14,7 +14,7 @@ for line in input:
 	strFac[j,i]=abs(float(s))
 	a=17*i+j
 	if (a==0 or a==16 or a==272 or a==288):
-		strFac[j,i]=float('NaN')
+		strFac[j,i]=0
 	j=j+1
 	if (j==17):
 		j=0
