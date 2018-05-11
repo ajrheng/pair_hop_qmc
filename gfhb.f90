@@ -6,11 +6,9 @@ use hyzer; implicit none
 integer :: i,j
 
 call lattice
-! call operators
 call pvect0
 call vxweight
 call initvrtx
-!call initvrtx_dirloop
 
 if (istep.ne.0) then
     open(12,file='log.txt',status='unknown',access='append')
@@ -57,7 +55,7 @@ end subroutine simulation
 !===================!
 subroutine zerodata
 !===================!
-use bgfm; use bmsr; use hyzer; implicit none
+use bmsr; use hyzer; implicit none
 integer:: dx,dy,k1,k2
 
 avu=0.d0
@@ -75,8 +73,6 @@ rhotpx=0.d0
 rhotpy=0.d0
 corr(:,:)=0.d0
 strFactTemp(:,:)=0.d0
-
-!ggg(:,:,:)=0.d0
 
 end subroutine zerodata
 !=======================!
@@ -145,23 +141,23 @@ end subroutine adjstl
 !===================!
 subroutine lattice
 !===================!
- use hyzer; implicit none
+use hyzer; implicit none
 
- integer :: i,q,ix,iy,ix1,iy1,ix2,iy2,ix3,iy3,ix4,iy4,m,k1,k2
- integer :: iq,iiq,ns(0:3)
+integer :: i,q,ix,iy,ix1,iy1,ix2,iy2,ix3,iy3,ix4,iy4,m,k1,k2
+integer :: iq,iiq,ns(0:3)
 
- i=0
- m=0
- do iy=0,ny-1
- do ix=0,nx-1
-    i=i+1
-    xy(1,i)=ix
-    xy(2,i)=iy
-    xy1(ix,iy)=i
- enddo
- enddo
+i=0
+m=0
+do iy=0,ny-1
+    do ix=0,nx-1
+        i=i+1
+        xy(1,i)=ix
+        xy(2,i)=iy
+        xy1(ix,iy)=i
+enddo
+    enddo
 
- do q=1,nn
+do q=1,nn
     ix1=xy(1,q); iy1=xy(2,q)
     ix2=mod(ix1+1,nx); iy2=iy1
     ix3=mod(ix1+1,nx); iy3=mod(iy1+1,ny)
@@ -174,8 +170,8 @@ subroutine lattice
     if (mod(q,nx)==0) then
         m=m+1
     endif
- enddo
- do iq=0,15
+enddo
+do iq=0,15
     iiq=iq
     ns(0)=mod(iiq,2); iiq=iiq/2
     ns(1)=mod(iiq,2); iiq=iiq/2
@@ -186,7 +182,7 @@ subroutine lattice
     iq2ns(1,iq)=ns(1)
     iq2ns(2,iq)=ns(2)
     iq2ns(3,iq)=ns(3)
- enddo
+enddo
 
 !intialize strFact to 0
 strFact(:,:)=0.d0
@@ -198,13 +194,13 @@ end subroutine lattice
 !====================!
 subroutine pvect0
 !====================!
- use hyzer; implicit none
+use hyzer; implicit none
 
- integer :: iq,iiq,s1,s2,s3,s4
+integer :: iq,iiq,s1,s2,s3,s4
 
- amax=0.d0; wgt(:)=0.d0; awgt(:)=0.d0; dwgt(:)=0.d0
+amax=0.d0; wgt(:)=0.d0; awgt(:)=0.d0; dwgt(:)=0.d0
 
- do iq=0,15
+do iq=0,15
     iiq=iq
     s1=mod(iiq,2); iiq=iiq/2
     s2=mod(iiq,2); iiq=iiq/2
@@ -214,193 +210,174 @@ subroutine pvect0
     wgt(iq)= wgt(iq) + vv2*dble(s1*s3 + s2*s4)
     wgt(iq)= wgt(iq) - mu*dble(s1+s2+s3+s4)/z
     if (wgt(iq).gt.amax) amax=wgt(iq)
- enddo
+enddo
 
- amax=amax+1.d0
- do iq=0,15
+amax=amax+1.d0
+do iq=0,15
     awgt(iq)=amax-wgt(iq)
     if (awgt(iq).gt.1.d-6) then
-       dwgt(iq)=1.0/awgt(iq)
+        dwgt(iq)=1.0/awgt(iq)
     else
-       dwgt(iq)=1.d6
+        dwgt(iq)=1.d6
     endif
- enddo
+enddo
 
 end subroutine pvect0
 !======================!
+
 !==========================!
 subroutine vxweight
 !==========================!
-  use hyzer; implicit none
+use hyzer; implicit none
 
-  integer :: i,j,k,m,iq,jq,iiv,nv
-  integer :: ns(0:7),ns1(0:7)
-  real(8) :: vvsum,musum
+integer :: i,j,k,m,iq,jq,iiv,nv
+integer :: ns(0:7),ns1(0:7)
+real(8) :: vvsum,musum
 
-  ivx(:)=-1; vxleg(:,:)=-1
-!  xhop(:)=0; yhop(:)=0; xxhop(:)=0; yyhop(:)=0
-  nv=0
+ivx(:)=-1; vxleg(:,:)=-1
+nv=0
 
 !=========================================!
 ! diagonal vertices:    n3  n2   n1  n0
 !                       ===============
 !                       n3  n2   n1  n0
 !=========================================!
-  do iq=0,15
-     ns(0:7)=0
-     do i=0,3
+do iq=0,15
+    ns(0:7)=0
+    do i=0,3
         if(btest(iq,i)) ns(i)=1
         ns(i+4)=ns(i)
-     enddo
-     iiv=0
-     do k=0,7
+    enddo
+    iiv=0
+    do k=0,7
         iiv=iiv+ns(k)*(2**k)
-     enddo
-     nv=nv+1
-     ivx(iiv)=nv; vxi(nv)=iiv
-     jq=0
-!     do k=0,3
-!        jq=jq+ns(k+4)*(2**k)
-!     enddo
-     op(0,iq)=iq; vxoper(nv)=0
-     vxcode(0,iq)=nv
-     do k=0,7
+    enddo
+    nv=nv+1
+    ivx(iiv)=nv; vxi(nv)=iiv
+    jq=0
+    op(0,iq)=iq; vxoper(nv)=0
+    vxcode(0,iq)=nv
+    do k=0,7
         vxleg(k,nv)=ns(k)
-     enddo
-     !wgt(nv)=awgt(iq)
-!     wgt(nv)=0
-!     do i=0,3
-!        wgt(nv)=wgt(nv)+vv*ns(i)*ns(mod(i+1,4))
-!        wgt(nv)=wgt(nv)-mu*dble(ns(i))/z
-!     enddo
-!     wgt(nv)=amax - wgt(nv)
-  enddo
+    enddo
+enddo
 !========================================!
 ! single boson hopping vertices
 !========================================!
-  do iq=0,15
-     ns(0:7)=0
-     do i=0,3
+do iq=0,15
+    ns(0:7)=0
+    do i=0,3
         if(btest(iq,i)) ns(i)=1
         ns(i+4)=ns(i)
-     enddo
+    enddo
 
-     do i=0,3
+    do i=0,3
         ns1(:)=ns(:)
         j=mod(i+1,4)
         if(ns1(i)/= ns1(j)) then
-          ns1(i+4)=1-ns(i)
-          ns1(j+4)=1-ns(j)
-          iiv=0
-          do k=0,7
-             iiv=iiv+ns1(k)*(2**k)
-          enddo
-          nv=nv+1
-          ivx(iiv)=nv; vxi(nv)=iiv
-          jq=0
-          do k=0,3
-             jq=jq+ns1(k+4)*(2**k)
-          enddo
-          op(i+1,iq)=jq; vxoper(nv)=i+1
-          vxcode(i+1,iq)=nv
-          do k=0,7
-             vxleg(k,nv)=ns1(k)
-          enddo
-          !wgt(nv)=tt
+            ns1(i+4)=1-ns(i)
+            ns1(j+4)=1-ns(j)
+            iiv=0
+            do k=0,7
+                iiv=iiv+ns1(k)*(2**k)
+            enddo
+            nv=nv+1
+            ivx(iiv)=nv; vxi(nv)=iiv
+            jq=0
+            do k=0,3
+                jq=jq+ns1(k+4)*(2**k)
+            enddo
+            op(i+1,iq)=jq; vxoper(nv)=i+1
+            vxcode(i+1,iq)=nv
+            do k=0,7
+                vxleg(k,nv)=ns1(k)
+            enddo
         endif
-     enddo
-  enddo
+    enddo
+enddo
 !======================================!
 ! pair hopping vertices
 !======================================!
-  do iq=0,15
-     ns(0:7)=0
-     do i=0,3
+do iq=0,15
+    ns(0:7)=0
+    do i=0,3
         if(btest(iq,i)) ns(i)=1
         ns(i+4)=ns(i)
-     enddo
-     if((ns(0).eq.0).and.(ns(1).eq.0) &
+    enddo
+    if((ns(0).eq.0).and.(ns(1).eq.0) &
         .and.(ns(2).eq.1).and.(ns(3).eq.1)) then
         ns(4)=1; ns(5)=1; ns(6)=0; ns(7)=0
         iiv=0
         do k=0,7
-           iiv=iiv+ns(k)*(2**k)
+            iiv=iiv+ns(k)*(2**k)
         enddo
         nv=nv+1
         ivx(iiv)=nv; vxi(nv)=iiv
         jq=0
         do k=0,3
-           jq=jq+ns(k+4)*(2**k)
+            jq=jq+ns(k+4)*(2**k)
         enddo
         op(5,iq)=jq; vxoper(nv)=5
         vxcode(5,iq)=nv
         do k=0,7
-           vxleg(k,nv)=ns(k)
+            vxleg(k,nv)=ns(k)
         enddo
-        !wgt(nv)=tp
      elseif  ((ns(0).eq.1).and.(ns(1).eq.1) &
         .and.(ns(2).eq.0).and.(ns(3).eq.0))then
         ns(4)=0; ns(5)=0; ns(6)=1; ns(7)=1
         iiv=0
         do k=0,7
-           iiv=iiv+ns(k)*(2**k)
+            iiv=iiv+ns(k)*(2**k)
         enddo
         nv=nv+1
         ivx(iiv)=nv; vxi(nv)=iiv
         jq=0
         do k=0,3
-           jq=jq+ns(k+4)*(2**k)
+            jq=jq+ns(k+4)*(2**k)
         enddo
         op(5,iq)=jq; vxoper(nv)=5
         vxcode(5,iq)=nv
         do k=0,7
-           vxleg(k,nv)=ns(k)
+            vxleg(k,nv)=ns(k)
         enddo
-        !wgt(nv)=tp
      elseif  ((ns(0).eq.1).and.(ns(1).eq.0) &
         .and.(ns(2).eq.0).and.(ns(3).eq.1))then
         ns(4)=0; ns(5)=1; ns(6)=1; ns(7)=0
         iiv=0
         do k=0,7
-           iiv=iiv+ns(k)*(2**k)
+            iiv=iiv+ns(k)*(2**k)
         enddo
         nv=nv+1
         ivx(iiv)=nv; vxi(nv)=iiv
         jq=0
         do k=0,3
-           jq=jq+ns(k+4)*(2**k)
+            jq=jq+ns(k+4)*(2**k)
         enddo
         op(6,iq)=jq; vxoper(nv)=6
         vxcode(6,iq)=nv
         do k=0,7
-           vxleg(k,nv)=ns(k)
+            vxleg(k,nv)=ns(k)
         enddo
-        !wgt(nv)=tp
      elseif  ((ns(0).eq.0).and.(ns(1).eq.1) &
         .and.(ns(2).eq.1).and.(ns(3).eq.0))then
         ns(4)=1; ns(5)=0; ns(6)=0; ns(7)=1
         iiv=0
         do k=0,7
-           iiv=iiv+ns(k)*(2**k)
+            iiv=iiv+ns(k)*(2**k)
         enddo
         nv=nv+1
         ivx(iiv)=nv; vxi(nv)=iiv
         jq=0
         do k=0,3
-           jq=jq+ns(k+4)*(2**k)
+            jq=jq+ns(k+4)*(2**k)
         enddo
         op(6,iq)=jq; vxoper(nv)=6
         vxcode(6,iq)=nv
         do k=0,7
-           vxleg(k,nv)=ns(k)
+            vxleg(k,nv)=ns(k)
         enddo
-        !wgt(nv)=tp
-     endif
-  enddo
-
-
-
-  vtyp(1:16)=0; vtyp(17:48)=1; vtyp(49:52)=2
+    endif
+enddo
 
 end subroutine vxweight
 !==================================!
@@ -494,8 +471,6 @@ do i=1,nvx
         do oc=0,7
             vxprb(oc,ic,i)=vxprb(oc,ic,i)/vxprb(7,ic,i)
             if (vxprb(oc,ic,i).lt.1.e-6) vxprb(oc,ic,i)=-1.
-            !write(*,*)i," ",ic," ",oc," ",vxprb(oc,ic,i)
-            !write(*,*)ns(0)," ",ns(1)," ",ns(2)," ",ns(3)," ",ns(4)," ",ns(5)," ",ns(6)," ",ns(7)
         enddo
     enddo
 enddo

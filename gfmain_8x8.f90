@@ -38,16 +38,6 @@ integer :: iir,jjr,kkr,nnr
 end module hyzer
 !==============================!
 
-!==============================!
-module bgfm
-use hyzer, only: nn,ntau;
-
-integer :: ngf
-real(8) :: ccc(nn,nn),ggg(nn,nn,0:ntau)
-
-end module bgfm
-!=============================!
-
 !=============================!
 module bmsr
 
@@ -76,7 +66,7 @@ end program main
 subroutine writeres (nmsr)
 !==========================!
 
-use bgfm; use bmsr; use hyzer;
+use bmsr; use hyzer;
 
 implicit none
 
@@ -163,7 +153,7 @@ end subroutine calcCorrStr
 !======================================!
 subroutine equatestg
 !======================================!
-use bgfm; use bmsr; use hyzer;
+use bmsr; use hyzer;
 
 implicit none
 

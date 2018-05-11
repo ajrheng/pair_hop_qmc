@@ -25,12 +25,9 @@ if(i.eq.0)then
     call updloop(passed)
     if (.not.passed) goto 1
 else
-!2    call gdupdate
 2   call dupdate
     call linkoper
     call updloop(passed)
-    !call initw
-    !call updloop_gfm(passed)
     if (.not.passed) goto 2
 endif
 
