@@ -44,7 +44,7 @@ use hyzer, only: nn,ntau;
 
 integer :: ngf
 real(8) :: ccc(nn,nn),ggg(nn,nn,0:ntau)
- 
+
 end module bgfm
 !=============================!
 
@@ -52,7 +52,7 @@ end module bgfm
 module bmsr
 
 real(8),save :: avu,avk,avp,umag,sxu,ssa,sxa,rhox,rhoy,rhotx,rhoty,rhotpx,rhotpy
- 
+
 end module bmsr
 !============================!
 
@@ -256,10 +256,10 @@ end subroutine writestg
 subroutine initconf
 !======================================!
   use hyzer; implicit none
-  
+
   integer :: i
   real(8) :: rndm
-  
+
   l=20; nh=0; nl=5
 
   do i=1,nn
@@ -322,7 +322,7 @@ subroutine writeconf
 !=====================================!
 subroutine read_params
 !=====================================!
-use hyzer;    implicit none 
+use hyzer;    implicit none
 
 open (unit=10,file='read.in',status='old')
 read(10,*)tt!1
