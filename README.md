@@ -1,7 +1,7 @@
 # Stochastic Series Expansion (SSE) Quantum Monte Carlo (QMC)
 
 ## Description
-A QMC algorithm employing Sandvik's SSE method implemented in Fortran 90, adapted for a Bose-Hubbard model. 
+A QMC algorithm employing Sandvik's SSE method implemented in Fortran 90, adapted for a Bose-Hubbard model with correlated pair hopping. 
 
 See [Sandvik, 1999](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.59.R14157) on the algorithm, and [Sandvik, 1997](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.56.11678) for quantities measured in this program.
 
