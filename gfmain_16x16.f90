@@ -44,7 +44,7 @@ use hyzer, only: nn,ntau;
 
 integer :: ngf
 real(8) :: ccc(nn,nn),ggg(nn,nn,0:ntau)
- 
+
 end module bgfm
 !=============================!
 
@@ -52,32 +52,22 @@ end module bgfm
 module bmsr
 
 real(8),save :: avu,avk,avp,umag,sxu,ssa,sxa,rhox,rhoy,rhotx,rhoty,rhotpx,rhotpy
- 
+
 end module bmsr
 !============================!
 
 !============================!
 program main
 !============================!
-  use hyzer; implicit none
+use hyzer; implicit none
 
-  integer :: j,seed(4)
+call read_params
+write(*,*)'read params'
+write(*,*)"tt: ",tt,"tp: ",tp,"vv: ",vv,"vv2: ",vv2,"mu: ",mu,"beta: ",beta
 
-  call read_params
-  write(*,*)'read params'
-  write(*,*)"tt: ",tt,"tp: ",tp,"vv: ",vv,"vv2: ",vv2,"mu: ",mu,"beta: ",beta
-
-  call initran
-  !if (equ.eq.0) then
-     call initconf
-  !else
-     !open (UNIT=20,FILE='conf',STATUS='old')
-     !call readconf
-!     if (equ.eq.1) call readconf
-!     if (equ.eq.2) call readconf2
-     !close (20)
-  !endif
-  call simulation
+call initran
+call initconf
+call simulation
 
 end program main
 !=============================!
@@ -86,83 +76,51 @@ end program main
 subroutine writeres (nmsr)
 !==========================!
 
- use bgfm; use bmsr; use hyzer;
+use bgfm; use bmsr; use hyzer;
 
- implicit none
+implicit none
 
- integer :: i,j,k,itau,nmsr,x,y,dx,dy,k1,k2
-! real(8) :: fac(jmax),sum_amax
- real(8) :: gfm(0:nn/2,0:ntau),tau,cosk1,sink1,cosk2,sink2,pi
+integer :: i,j,k,nmsr,x,y,dx,dy,k1,k2
+real(8) :: cosk1,sink1,cosk2,sink2,pi
 
-! fac(1)=2.d0 ! ~nb/nn !
-! sum_amax=0.d0
-! do j=1,jmax
-!    sum_amax=sum_amax+amax(j)*fac(j)
-! enddo
- umag=umag/dble(nmsr)
- avu=-avu/(dble(beta)*dble(nmsr)*dble(nn))
-! avu=avu+sum_amax
- avu=avu+amax*dble(nb/nn)
- avk=-avk/(dble(beta)*dble(nmsr)*dble(nn))
- avp=-avp/(dble(beta)*dble(nmsr)*dble(nn))
- sxu=sxu/dble(nmsr)
- ssa=ssa/dble(nmsr)
-! ssx=ssx/dble(nmsr)
-! ssy=ssy/dble(nmsr)
- sxa=sxa/dble(nmsr)
- rhox=rhox/(dble(nmsr))
- rhoy=rhoy/(dble(nmsr))
- rhotx=rhotx/(dble(nmsr))
- rhoty=rhoty/(dble(nmsr))
- rhotpx=rhotpx/(dble(nmsr))
- rhotpy=rhotpy/(dble(nmsr))
+umag=umag/dble(nmsr)
+avu=-avu/(dble(beta)*dble(nmsr)*dble(nn))
+avu=avu+amax*dble(nb/nn)
+avk=-avk/(dble(beta)*dble(nmsr)*dble(nn))
+avp=-avp/(dble(beta)*dble(nmsr)*dble(nn))
+sxu=sxu/dble(nmsr)
+ssa=ssa/dble(nmsr)
+sxa=sxa/dble(nmsr)
+rhox=rhox/(dble(nmsr))
+rhoy=rhoy/(dble(nmsr))
+rhotx=rhotx/(dble(nmsr))
+rhoty=rhoty/(dble(nmsr))
+rhotpx=rhotpx/(dble(nmsr))
+rhotpy=rhotpy/(dble(nmsr))
 
-! open(UNIT=10,FILE='col.dat',STATUS='unknown',ACCESS='append')
-! write(10,*)ssx,ssy
-! close(10)
+open(UNIT=10,FILE='enr.dat',STATUS='unknown',ACCESS='append')
+write(10,*)avu,avk,avp
+close(10)
 
- open(UNIT=10,FILE='enr.dat',STATUS='unknown',ACCESS='append')
- write(10,*)avu,avk,avp
- close(10)
+open(UNIT=10,FILE='uni.dat',STATUS='unknown',ACCESS='append')
+write(10,*)sxu,umag
+close(10)
 
- open(UNIT=10,FILE='uni.dat',STATUS='unknown',ACCESS='append')
- write(10,*)sxu,umag
- close(10)
+open(UNIT=10,FILE='stgpipi.dat',STATUS='unknown',ACCESS='append')
+write(10,*)ssa,sxa
+close(10)
 
- open(UNIT=10,FILE='stgpipi.dat',STATUS='unknown',ACCESS='append')
- write(10,*)ssa,sxa
- close(10)
+open(UNIT=10,FILE='rho.dat',STATUS='unknown',ACCESS='append')
+write(10,*)rhox,rhoy
+close(10)
 
- open(UNIT=10,FILE='rho.dat',STATUS='unknown',ACCESS='append')
- write(10,*)rhox,rhoy
- close(10)
+open(UNIT=10,FILE='rhot.dat',STATUS='unknown',ACCESS='append')
+write(10,*)rhotx,rhoty
+close(10)
 
- open(UNIT=10,FILE='rhot.dat',STATUS='unknown',ACCESS='append')
- write(10,*)rhotx,rhoty
- close(10)
-
- open(UNIT=10,FILE='rhotp.dat',STATUS='unknown',ACCESS='append')
- write(10,*)rhotpx,rhotpy
- close(10)
-
-
- !gfm(:,:)=0.d0
- !do i=1,nn
- !   do k=0,nn/2
- !      j=i+k; if(j.gt. nn) j=j-nn
- !      gfm(k,:)=gfm(k,:)+ggg(i,j,:)
- !   enddo
- !enddo
- !gfm(:,:)=gfm(:,:)/(dble(nmsr)*dble(nl))
-
- !open(UNIT=10,FILE='gfm.dat',STATUS='unknown',ACCESS='append')
- !do itau=0,ntau/2
- !   do i=0,nn/2
- !      write(10,15)itau,i,0.5d0*(gfm(i,itau)+gfm(i,ntau-itau))
- !   enddo
- !enddo
- !close(10)
-!15 format(I5,' ',I5,' ',F16.12)
+open(UNIT=10,FILE='rhotp.dat',STATUS='unknown',ACCESS='append')
+write(10,*)rhotpx,rhotpy
+close(10)
 
 end subroutine writeres
 !======================!
@@ -171,48 +129,33 @@ end subroutine writeres
 subroutine calcCorrStr(nmsr)
 !======================================!
 use hyzer; implicit none
-integer :: i,j,k1,k2,nmsr,ix1,iy1,ix2,iy2!,countPlusOne, countMinusOne
+integer :: i,j,k1,k2,nmsr,ix1,iy1,ix2,iy2
 real(8) :: pi,cosk1,sink1,cosk2,sink2
 
- do i=1,nn
-  do j=1,nn
-    corr(i,j)=corr(i,j)/(dble(nmsr))
-    !write(*,*)"corr",i," ",j," ",corr(i,j)
-  enddo
+do i=1,nn
+    do j=1,nn
+        corr(i,j)=corr(i,j)/(dble(nmsr))
+    enddo
 enddo
 
-!countPlusOne=0; countMinusOne=0;
 pi=3.141592654
 do k1=0,nx
-  do k2=0,nx
-    do i=1,nn
-      do j=1,nn
-        ix1=xy(1,i)
-        iy1=xy(2,i)
-        ix2=xy(1,j)
-        iy2=xy(2,j)
-        !cosk1=DCOS((dble(k1)/50)*pi*dx)
-        cosk1=DCOS(dble(k1)*2.d0*pi*dble(ix1-ix2)/dble(nx))
-        !sink1=DSIN((dble(k1)/50)*pi*dx)
-        sink1=DSIN(dble(k1)*2.d0*pi*dble(ix1-ix2)/dble(nx))
-        !cosk2=DCOS((dble(k2)/50)*pi*dy)
-        cosk2=DCOS(dble(k2)*2.d0*pi*dble(iy1-iy2)/dble(nx))
-        !sink2=DSIN((dble(k2)/50)*pi*dy)
-        sink2=DSIN(dble(k2)*2.d0*pi*dble(iy1-iy2)/dble(nx))
-        !if (k1==nx/2 .and. k2==nx/2) then
-        !  write(*,*)"cosk1",cosk1,"cosk2",cosk2,"sink1",sink1,"sink2",sink2
-        !  if (abs(cosk1*cosk2-1)<0.001) then
-        !      countPlusOne=countPlusOne+1
-        !  elseif (abs(cosk1*cosk2+1)<0.001) then
-        !      countMinusOne=countMinusOne+1
-        !  endif
-        !endif
-        strFactTemp(k1,k2)=strFactTemp(k1,k2)+(cosk1*cosk2-sink1*sink2)*corr(i,j)
-      enddo
+    do k2=0,nx
+        do i=1,nn
+            do j=1,nn
+                ix1=xy(1,i)
+                iy1=xy(2,i)
+                ix2=xy(1,j)
+                iy2=xy(2,j)
+                cosk1=DCOS(dble(k1)*2.d0*pi*dble(ix1-ix2)/dble(nx))
+                sink1=DSIN(dble(k1)*2.d0*pi*dble(ix1-ix2)/dble(nx))
+                cosk2=DCOS(dble(k2)*2.d0*pi*dble(iy1-iy2)/dble(nx))
+                sink2=DSIN(dble(k2)*2.d0*pi*dble(iy1-iy2)/dble(nx))
+                strFactTemp(k1,k2)=strFactTemp(k1,k2)+(cosk1*cosk2-sink1*sink2)*corr(i,j)
+            enddo
+        enddo
     enddo
-  enddo
 enddo
-!write(*,*)"countPlusOne",countPlusOne,"countMinusOne",countMinusOne
 
 end subroutine calcCorrStr
 !=======================================!
@@ -227,9 +170,9 @@ implicit none
 integer :: k1,k2
 
 do k1=0,nx
-  do k2=0,nx
-    strFact(k1,k2) = strFact(k1,k2)+strFactTemp(k1,k2)/dble(nruns*nn)
-  enddo
+    do k2=0,nx
+        strFact(k1,k2) = strFact(k1,k2)+strFactTemp(k1,k2)/dble(nruns*nn)
+    enddo
 enddo
 
 end subroutine equatestg
@@ -243,9 +186,9 @@ integer :: k1,k2
 
 open(UNIT=10,FILE='stgfull.dat',STATUS='unknown',ACCESS='append')
 do k1=0,nx
-  do k2=0,nx
-    write(10,*)strFact(k1,k2)
-  enddo
+    do k2=0,nx
+        write(10,*)strFact(k1,k2)
+    enddo
 enddo
 close(10)
 
@@ -255,22 +198,22 @@ end subroutine writestg
 !======================================!
 subroutine initconf
 !======================================!
-  use hyzer; implicit none
-  
-  integer :: i
-  real(8) :: rndm
-  
-  l=20; nh=0; nl=5
+use hyzer; implicit none
 
-  do i=1,nn
-     st(i)=int(rndm()*2.0)
-  enddo
+integer :: i
+real(8) :: rndm
 
-  allocate(gstring(l))
-  gstring(:)=0
+l=20; nh=0; nl=5
 
-  allocate(vert(0:l-1))
-  allocate(link(0:8*l-1))
+do i=1,nn
+    st(i)=int(rndm()*2.0)
+enddo
+
+allocate(gstring(l))
+gstring(:)=0
+
+allocate(vert(0:l-1))
+allocate(link(0:8*l-1))
 
 end subroutine initconf
 !=====================================!
@@ -278,17 +221,17 @@ end subroutine initconf
 !===================!
 subroutine readconf
 !===================!
- use hyzer; implicit none
+use hyzer; implicit none
 
- integer i
+integer i
 
- read(20,*)l,nh,nl
- do i=1,nn
+read(20,*)l,nh,nl
+do i=1,nn
     read(20,*)st(i)
- enddo
- do i=1,l
+enddo
+do i=1,l
     read(20,*)gstring(i)
- enddo
+enddo
 
 end subroutine readconf
 !=======================!
@@ -296,33 +239,30 @@ end subroutine readconf
 !====================!
 subroutine writeconf
 !====================!
- use hyzer; implicit none
+use hyzer; implicit none
 
- integer :: i,no
- real :: mn
+integer :: i,no
+real :: mn
 
- no=0
- write(20,*)"l:",l,"nh:",nh,"nl:",nl
- do i=1,nn
+no=0
+write(20,*)"l:",l,"nh:",nh,"nl:",nl
+do i=1,nn
     if (st(i)==1) no=no+1
     write(20,"(i1,a1)",advance="no")st(i)," "
     if (mod(i,nx)==0) then
         write(20,*)
     endif
- enddo
- mn=no/dble(nn)
- write(20,*)"Average density:",mn
- write(20,*)"----------------------------------------"
- !do i=1,l
- !   write(20,*)gstring(i)
- !enddo
+enddo
+mn=no/dble(nn)
+write(20,*)"Average density:",mn
+write(20,*)"----------------------------------------"
 
- end subroutine writeconf
+end subroutine writeconf
 !========================!
 !=====================================!
 subroutine read_params
 !=====================================!
-use hyzer;    implicit none 
+use hyzer;    implicit none
 
 open (unit=10,file='read.in',status='old')
 read(10,*)tt!1
@@ -343,27 +283,27 @@ end subroutine read_params
 !======================================================!
 subroutine initran
 !======================================================!
-  use hyzer, only: iir,jjr,kkr,nnr;   implicit none
+use hyzer, only: iir,jjr,kkr,nnr;   implicit none
 
-  integer :: is,js,ks,ls
-  real(8) ::    rndm
+integer :: is,js,ks,ls
+real(8) ::    rndm
 
-  open(10,file='rand.in',status='old')
-  read(10,*)is
-  read(10,*)js
-  read(10,*)ks
-  read(10,*)ls
-  close(10)
-  iir=1+abs(is)
-  jjr=1+abs(js)
-  kkr=1+abs(ks)
-  nnr=ls
-  open(10,file='rand.in',status='unknown')
-  write(10,*)abs(nint((rndm()-.5)/.23283064e-9))
-  write(10,*)abs(nint((rndm()-.5)/.23283064e-9))
-  write(10,*)abs(nint((rndm()-.5)/.23283064e-9))
-  write(10,*)abs(nint((rndm()-.5)/.23283064e-9))
-  close(10)
+open(10,file='rand.in',status='old')
+read(10,*)is
+read(10,*)js
+read(10,*)ks
+read(10,*)ls
+close(10)
+iir=1+abs(is)
+jjr=1+abs(js)
+kkr=1+abs(ks)
+nnr=ls
+open(10,file='rand.in',status='unknown')
+write(10,*)abs(nint((rndm()-.5)/.23283064e-9))
+write(10,*)abs(nint((rndm()-.5)/.23283064e-9))
+write(10,*)abs(nint((rndm()-.5)/.23283064e-9))
+write(10,*)abs(nint((rndm()-.5)/.23283064e-9))
+close(10)
 
 end subroutine initran
 !=======================================================!
@@ -371,19 +311,19 @@ end subroutine initran
 !======================================================!
 real(8) function rndm()
 !======================================================!
-  use hyzer, only: iir,jjr,kkr,nnr; implicit none
+use hyzer, only: iir,jjr,kkr,nnr; implicit none
 
-  integer :: mzran
+integer :: mzran
 
-  mzran=iir-kkr
-  if (mzran.lt.0) mzran=mzran+2147483579
-  iir=jjr
-  jjr=kkr
-  kkr=mzran
-  nnr=69069*nnr+1013904243
-  mzran=mzran+nnr
-  rndm=.5+.23283064e-9*mzran
+mzran=iir-kkr
+if (mzran.lt.0) mzran=mzran+2147483579
+iir=jjr
+jjr=kkr
+kkr=mzran
+nnr=69069*nnr+1013904243
+mzran=mzran+nnr
+rndm=.5+.23283064e-9*mzran
 
-  return
+return
 end function rndm
 !========================================================!
