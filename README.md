@@ -3,7 +3,7 @@
 ## Description
 A QMC algorithm employing Sandvik's SSE method implemented in Fortran 90, adapted for a Bose-Hubbard model. 
 
-See [Sandvik, 1999](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.59.R14157) on the algorithm, and [Sandvik,1997](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.56.11678) for quantities measured in this program.
+See [Sandvik, 1999](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.59.R14157) on the algorithm, and [Sandvik, 1997](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.56.11678) for quantities measured in this program.
 
 Program is split into 3 .f90 files: gfmain, gfhb and gfupd. gfmain contains the main program. Initialization of operating string, lattice, probability tables etc. are split between gfmain and gfhb. gfupd contains the main operator-loop updates.
 
