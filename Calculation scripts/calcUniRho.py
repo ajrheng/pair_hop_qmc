@@ -28,7 +28,7 @@ class getItems():
 				else:#if mu has decimal eg. 13.4
 					items_removed.append(m)
 
- 
+
 		items_removed = sorted(items_removed)
 		for index,truncated in enumerate(items_removed):
 			items_removed[index] = "mu="+str(truncated)
@@ -50,7 +50,7 @@ class getItems():
 				datfilelist = datfile.read().split()
 				counter = 0
 				for item in datfilelist:
-					if counter%2 : 
+					if counter%2 :
 						rightlist.append(float(item))
 					else:
 						leftlist.append(float(item))
@@ -69,18 +69,18 @@ class getItems():
 					leftsd = self.standard_deviation(leftlist)
 					#dict_to_append["leftmean"] = leftmean
 					#dict_to_append["leftsd"] = leftsd
-					mean =(rightmean+leftmean)/2
+					mean =rightmean+leftmean
 					sd = math.sqrt(rightsd*rightsd+leftsd*leftsd)
 					dict_to_append["mean"] = mean
 					dict_to_append["sd"] = sd
 				elif dattype == "uni":
 					dict_to_append["mean"] = rightmean
-					dict_to_append["sd"] = rightsd	
+					dict_to_append["sd"] = rightsd
 				elif dattype == "stgpipi":
 					leftmean = self.calculate_mean(leftlist)
 					leftsd = self.standard_deviation(leftlist)
 					dict_to_append["mean"] = leftmean
-					dict_to_append["sd"] = leftsd				
+					dict_to_append["sd"] = leftsd
 
 				return_list.append(dict_to_append)
 
@@ -133,7 +133,7 @@ class getItems():
 
 		for row in array_of_calculations:
 			csv_List.append([row['subfolder'],row['mean'],row['sd']])
-		
+
 		csvfilename = self.get_file_name(pwd,dattype)
 
 		with open(csvfilename,'w') as csvFile:

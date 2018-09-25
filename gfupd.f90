@@ -47,7 +47,7 @@ real(8) :: ssum,sstr,ssus,dl,scc(1:nn,1:nn)
 
 su=0; sa=0; jjx=0; jjy=0; jjtx=0; jjty=0; jjtpx=0; jjtpy=0;nms=0
 scc(:,:)=0.d0!intermediate array for corr function
-do i=1,nn
+do i=1,nn !this is for measuring S(\pi,\pi) but it isn't really needed
     su=su+st(i)
     sa=sa+phase(i)*st(i)
 enddo
@@ -57,39 +57,39 @@ np=0!no of pair hop operators
 last=0;nh1=0
 do i=1,l
     ii=gstring(i)
-    if (ii == 0) then
-        q=min(int(rndm()*dble(nq))+1,nq)
+    if (ii == 0) then !if identity operator
+        q=min(int(rndm()*dble(nq))+1,nq) !pick a random plaquette
         do k=0,3
             ns(k)=st(plqt(k,q))
         enddo
-        iiq=ns2iq(ns(0),ns(1),ns(2),ns(3))
-        addp=beta*dble(nq)/dble(l-nh)
+        iiq=ns2iq(ns(0),ns(1),ns(2),ns(3)) !get the binary number
+        addp=beta*dble(nq)/dble(l-nh) !l is like M, the expansion cutoff in the series expansion, nh is like n, the number of non-identity operators
         p=awgt(iiq)*addp
         if (p >= 1.d0) then
-            gstring(i)=7*q
-            nh=nh+1
-        elseif (rndm() <= p) then
+            gstring(i)=7*q !insert diagonal operator
+            nh=nh+1 !count diagonal operators
+        elseif (rndm() <= p) then !similarly insert diagonal operator
             gstring(i)=7*q
             nh=nh+1
         endif
-    elseif (mod(ii,7) == 0) then
-        q=ii/7
+    elseif (mod(ii,7) == 0) then !if there already exists a diagonal operator there
+        q=ii/7 !get the plaquette
         do k=0,3
             ns(k)=st(plqt(k,q))
         enddo
         iiq=ns2iq(ns(0),ns(1),ns(2),ns(3))
-        delp=dble(l-nh+1)/(beta*dble(nq))
+        delp=dble(l-nh+1)/(beta*dble(nq)) !probably to remove operator
         p=dwgt(iiq)*delp
         if (p >= 1.d0) then
-            gstring(i)=0
-            nh=nh-1
+            gstring(i)=0 !set to identity
+            nh=nh-1 !reduce the power
         elseif (rndm() <= p) then
             gstring(i)=0
             nh=nh-1
         endif
         nu=nu+1
         nh1=nh1+1
-    else
+    else !if off-diagonal operator
         q=ii/7
         o=mod(ii,7)
         do k=0,3
@@ -107,7 +107,7 @@ do i=1,l
             tt1=1-ss1; tt2=1-ss2; tt3=ss3; tt4=ss4
             jjx=jjx+ctra(o,ss1,ss2,ss3,ss4)
             jjtx=jjtx+ctra(o,ss1,ss2,ss3,ss4)
-            nk=nk+1
+            nk=nk+1 !number of single hop operators increase
         elseif (o==2) then
             tt1=ss1; tt2=1-ss2; tt3=1-ss3; tt4=ss4
             jjy=jjy+ctra(o,ss1,ss2,ss3,ss4)
@@ -127,7 +127,7 @@ do i=1,l
             tt1=1-ss1; tt2=1-ss2; tt3=1-ss3; tt4=1-ss4
             jjy=jjy+ctra(o,ss1,ss2,ss3,ss4)
             jjtpy=jjtpy+ctra(o,ss1,ss2,ss3,ss4)
-            np=np+1
+            np=np+1 !number of pair hop operators increase
         else
             tt1=1-ss1; tt2=1-ss2; tt3=1-ss3; tt4=1-ss4
             jjx=jjx+ctra(o,ss1,ss2,ss3,ss4)
@@ -135,11 +135,11 @@ do i=1,l
             np=np+1
         endif
         sa=sa+ph1*(tt1-ss1)+ph2*(tt2-ss2)+ph3*(tt3-ss3)+ph4*(tt4-ss4)!change sa only for spins that changed
-        last=nh1
+        last=nh1 !record the last time we encounter a off-diagonal operator
         iiq=ns2iq(ns(0),ns(1),ns(2),ns(3))
         jjq=op(o,iiq)
         do k=0,3
-            st(plqt(k,q))=iq2ns(k,jjq)
+            st(plqt(k,q))=iq2ns(k,jjq) !here we update the sites on the lattice due to the off diagonal operators
         enddo
     endif
     if (mod(i,8*nn).eq.1) then!update structure factor

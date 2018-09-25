@@ -151,31 +151,32 @@ m=0
 do iy=0,ny-1
     do ix=0,nx-1
         i=i+1
-        xy(1,i)=ix
-        xy(2,i)=iy
-        xy1(ix,iy)=i
+        xy(1,i)=ix !x coordinate of site number i
+        xy(2,i)=iy !y coordinate of site number i
+        xy1(ix,iy)=i !given coordinates ix, iy, what site number does it correspond to
 enddo
     enddo
 
-do q=1,nn
-    ix1=xy(1,q); iy1=xy(2,q)
-    ix2=mod(ix1+1,nx); iy2=iy1
-    ix3=mod(ix1+1,nx); iy3=mod(iy1+1,ny)
+do q=1,nn !iterate through plaquette number
+    ix1=xy(1,q); iy1=xy(2,q) !get x and y coordinate of the 4 sites in a plaquette
+    ix2=mod(ix1+1,nx); iy2=iy1 ! sites on plaquette go in anti-clockwise, if you imagine normal cartesian axes
+    ix3=mod(ix1+1,nx); iy3=mod(iy1+1,ny) !the mod is to account for plaquettes wrapping around lattice, i.e PBC
     ix4=ix1; iy4=mod(iy1+1,ny)
-    plqt(0,q)=xy1(ix1,iy1)
-    plqt(1,q)=xy1(ix2,iy2)
+    plqt(0,q)=xy1(ix1,iy1) !so site 0 of plaqeutte q is site index xy1(ix1,iy1)
+    plqt(1,q)=xy1(ix2,iy2) !etc etc
     plqt(2,q)=xy1(ix3,iy3)
     plqt(3,q)=xy1(ix4,iy4)
-    phase(q)=(-1)**(q+m)
+    phase(q)=(-1)**(q+m) !this is for calculation of S(\pi,\pi) i think, not so important.
     if (mod(q,nx)==0) then
         m=m+1
     endif
 enddo
-do iq=0,15
+
+do iq=0,15 !there are a total of 16 possible plaquette configurations (2^4)
     iiq=iq
-    ns(0)=mod(iiq,2); iiq=iiq/2
-    ns(1)=mod(iiq,2); iiq=iiq/2
-    ns(2)=mod(iiq,2); iiq=iiq/2
+    ns(0)=mod(iiq,2); iiq=iiq/2 !we store these configurations as a 4-bit number
+    ns(1)=mod(iiq,2); iiq=iiq/2 !eg. 0100 corresponds to 2, so ns2iq(0,1,0,0) = 2
+    ns(2)=mod(iiq,2); iiq=iiq/2 !iq2ns(1,2) = 1 for example.
     ns(3)=mod(iiq,2); iiq=iiq/2
     ns2iq(ns(0),ns(1),ns(2),ns(3))=iq
     iq2ns(0,iq)=ns(0)
@@ -206,12 +207,12 @@ do iq=0,15
     s2=mod(iiq,2); iiq=iiq/2
     s3=mod(iiq,2); iiq=iiq/2
     s4=mod(iiq,2); iiq=iiq/2
-    wgt(iq)= vv*dble(s1*s2 + s2*s3 + s3*s4 + s4*s1)
-    wgt(iq)= wgt(iq) + vv2*dble(s1*s3 + s2*s4)
-    wgt(iq)= wgt(iq) - mu*dble(s1+s2+s3+s4)/z
-    if (wgt(iq).gt.amax) amax=wgt(iq)
+    wgt(iq)= vv*dble(s1*s2 + s2*s3 + s3*s4 + s4*s1) !weight of a plaquette configuration, nn-repulsion term
+    wgt(iq)= wgt(iq) + vv2*dble(s1*s3 + s2*s4) !diagonal repulsion term
+    wgt(iq)= wgt(iq) - mu*dble(s1+s2+s3+s4)/z !chemical potential term
+    if (wgt(iq).gt.amax) amax=wgt(iq) !set a maximum weight
 enddo
-
+!the larger the wgt(iq), the more unfavourable it is, or the higher energy the configuration is
 amax=amax+1.d0
 do iq=0,15
     awgt(iq)=amax-wgt(iq)
@@ -243,22 +244,24 @@ nv=0
 !                       n3  n2   n1  n0
 !=========================================!
 do iq=0,15
+    !these are to keep track of the vertex with diagonal operators, i.e no change in the sites after action of operator
     ns(0:7)=0
     do i=0,3
-        if(btest(iq,i)) ns(i)=1
-        ns(i+4)=ns(i)
+        if(btest(iq,i)) ns(i)=1 !returns true if the bit is 1 at position i, for the integer iq
+        ns(i+4)=ns(i) !eg. 3 = 2^0 + 2^1, so btest(3,0) and btest(3,1) are true, btest(3,2) etc. are false.
     enddo
     iiv=0
     do k=0,7
-        iiv=iiv+ns(k)*(2**k)
+        iiv=iiv+ns(k)*(2**k) !converts the 8 site vertex to a unique integer iiv
     enddo
-    nv=nv+1
-    ivx(iiv)=nv; vxi(nv)=iiv
+    nv=nv+1 !number the vertex from 1 onwards
+    ivx(iiv)=nv; vxi(nv)=iiv !ivx(iiv) takes a vertex integer and returns the vertex number, vxi(nv) is the reverse
     jq=0
-    op(0,iq)=iq; vxoper(nv)=0
-    vxcode(0,iq)=nv
+    op(0,iq)=iq; vxoper(nv)=0 !op tells you when operator 0 (off-diagonal) acts on plaquette iq, result is iq
+    ! vxoper(nv) returns the operator type (0 = diagonal) for a vertex number nv
+    vxcode(0,iq)=nv !given an diagonal operator and the state of the plaquette sites before action of operator, what is the vertex number
     do k=0,7
-        vxleg(k,nv)=ns(k)
+        vxleg(k,nv)=ns(k) !given a vertex number nv, what is the k'th site's state
     enddo
 enddo
 !========================================!
@@ -273,13 +276,13 @@ do iq=0,15
 
     do i=0,3
         ns1(:)=ns(:)
-        j=mod(i+1,4)
-        if(ns1(i)/= ns1(j)) then
-            ns1(i+4)=1-ns(i)
-            ns1(j+4)=1-ns(j)
+        j=mod(i+1,4) !find the neighboring site
+        if(ns1(i)/= ns1(j)) then !if the next site is not the same as the previous site, single hop to that site
+            ns1(i+4)=1-ns(i) !flip old site.
+            ns1(j+4)=1-ns(j) !flip new site, so now boson hopped from old site to new site
             iiv=0
             do k=0,7
-                iiv=iiv+ns1(k)*(2**k)
+                iiv=iiv+ns1(k)*(2**k) !this encodes it as a binary 2 bit number. 2^0 + 2^1 + ...
             enddo
             nv=nv+1
             ivx(iiv)=nv; vxi(nv)=iiv
@@ -287,8 +290,8 @@ do iq=0,15
             do k=0,3
                 jq=jq+ns1(k+4)*(2**k)
             enddo
-            op(i+1,iq)=jq; vxoper(nv)=i+1
-            vxcode(i+1,iq)=nv
+            op(i+1,iq)=jq; vxoper(nv)=i+1 !act operator number i+1 on initial plaquette config iq gives jq
+            vxcode(i+1,iq)=nv !given operator number (i+1) and the initial state iq, you know what vertex number it is referring to
             do k=0,7
                 vxleg(k,nv)=ns1(k)
             enddo
@@ -298,6 +301,7 @@ enddo
 !======================================!
 ! pair hopping vertices
 !======================================!
+!repeat the above analysis for pair hopping vertices. idea is the same.
 do iq=0,15
     ns(0:7)=0
     do i=0,3
@@ -388,11 +392,11 @@ use hyzer; implicit none
 
 integer::ns(0:7),i,iiq,ic,oc,iiv,ns1(0:7),k,ns2(0:7),iq,o
 
-vxprb(:,:,:)=0
+vxprb(:,:,:)=0 !vxprb stores the probability of accepting the change
 vxnew(:,:,:)=0
 do i=1,nvx
-    iiq=vxi(i)
-    ns(0)=mod(iiq,2); iiq=iiq/2
+    iiq=vxi(i) !retrieve the binary number representing the vertex
+    ns(0)=mod(iiq,2); iiq=iiq/2 !undo the binary number to retrieve the spins
     ns(1)=mod(iiq,2); iiq=iiq/2
     ns(2)=mod(iiq,2); iiq=iiq/2
     ns(3)=mod(iiq,2); iiq=iiq/2
@@ -402,29 +406,29 @@ do i=1,nvx
     ns(7)=mod(iiq,2); iiq=iiq/2
     do ic=0,7
         ns1(:)=ns(:)
-        ns1(ic)=1-ns1(ic)
+        ns1(ic)=1-ns1(ic) !flip in the in spin
         ns2(:)=ns1(:)
         do oc=0,7
-            ns1(oc)=1-ns1(oc)
+            ns1(oc)=1-ns1(oc) !flip the out spin
             iiv=0
             do k=0,7
                 iiv=iiv+ns1(k)*(2**k)
             enddo
-            if (ivx(iiv)/=-1) then
-                vxnew(oc,ic,i)=ivx(iiv)
-                o=vxoper(ivx(iiv))
+            if (ivx(iiv)/=-1) then !if such a valid vertex exists, meaning not making some illegal update
+                vxnew(oc,ic,i)=ivx(iiv) !vxnew array takes oc (out spin), ic (in spin) and vertex number and gives you resulting vertex
+                o=vxoper(ivx(iiv)) !gives you operator type (0 for diagonal, 1,2,3,4 for single hop, 5,6 for pair hop)
                 if (o==0) then
                     iq=0
                     do k=0,3
                         iq=iq+ns1(k)*(2**k)
                     enddo
-                    vxprb(oc,ic,i)=awgt(iq)
+                    vxprb(oc,ic,i)=awgt(iq) !if diagonal operator, no change, then weight is simply weight of that vertex
                 elseif (o==1 .or. o==2 .or. o==3 .or. o==4 ) then
-                    vxprb(oc,ic,i)=tt
+                    vxprb(oc,ic,i)=tt !if its single hop, then weight is equal to tt (single hop amplitude)
                     if (o==1 .and. (ns1(1)>ns1(0))) then
-                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-1
-                    elseif (o==1 .and. (ns1(1)<ns1(0))) then
-                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=1
+                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-1 !ctra is the array to calculate stiffness.
+                    elseif (o==1 .and. (ns1(1)<ns1(0))) then !given operator and the initial spin configurations, you know how the spin
+                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=1 !will hop, then you know how to calculate the stiffness accordingly.
                     elseif (o==2 .and. ns1(2)>ns1(1)) then
                         ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-1
                     elseif (o==2 .and. ns1(2)<ns1(1)) then
@@ -439,7 +443,7 @@ do i=1,nvx
                         ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=1
                     endif
                 else
-                    vxprb(oc,ic,i)=tp
+                    vxprb(oc,ic,i)=tp !if pair hop then proportional to tp
                     if (o==5 .and. ns1(1)<ns1(2)) then
                         ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-2
                     elseif (o==5 .and. ns1(1)>ns1(2)) then
@@ -451,7 +455,7 @@ do i=1,nvx
                     endif
                 endif
             endif
-            ns1(:)=ns2(:)
+            ns1(:)=ns2(:) !you want to undo the out spin flip, because you are looping to try the next outspin.
         enddo
     enddo
 enddo
@@ -469,8 +473,8 @@ enddo
 do i=1,nvx
     do ic=0,7
         do oc=0,7
-            vxprb(oc,ic,i)=vxprb(oc,ic,i)/vxprb(7,ic,i)
-            if (vxprb(oc,ic,i).lt.1.e-6) vxprb(oc,ic,i)=-1.
+            vxprb(oc,ic,i)=vxprb(oc,ic,i)/vxprb(7,ic,i) !for this step, we normalize all the probabilties, because before
+            if (vxprb(oc,ic,i).lt.1.e-6) vxprb(oc,ic,i)=-1. !we let some probabilities be like tt or tp, and they are usually >1.
         enddo
     enddo
 enddo
