@@ -142,7 +142,7 @@ do i=1,l
             st(plqt(k,q))=iq2ns(k,jjq) !here we update the sites on the lattice due to the off diagonal operators
         enddo
     endif
-    if (mod(i,8*nn).eq.1) then!update structure factor
+    if (mod(i,8*nn).eq.1) then!update structure factor only at certain intervals
         nms=nms+1!separate counter
         do qi=1,nn
             do qj=1,nn
@@ -166,7 +166,7 @@ else
 endif
 do qi=1,nn
     do qj=1,nn
-        corr(qi,qj)=corr(qi,qj)+scc(qi,qj)/dble(nms)
+        corr(qi,qj)=corr(qi,qj)+scc(qi,qj)/dble(nms) !boson-boson correlation function normalized.
     enddo
 enddo
 
@@ -212,7 +212,7 @@ frst(:)=-1;  last(:)=-1
 vert(:)=-1;  link(:)=-1
 
 do p=1,l
-    if (gstring(p)/=0) then
+    if (gstring(p)/=0) then !if not identity operator
         o=mod(gstring(p),7)
         q=gstring(p)/7
         s0=plqt(0,q)
@@ -223,18 +223,21 @@ do p=1,l
             ns(k)=st(plqt(k,q))
         enddo
         iiq=ns2iq(ns(0),ns(1),ns(2),ns(3))
-        vert(ii)=vxcode(o,iiq)
-        jjq=op(o,iiq)
+        vert(ii)=vxcode(o,iiq) !store vertex number, we are labelling the operators sequentually from propagation 1, 2,3 ..
+        jjq=op(o,iiq) !binary number for resulting plaqeutte state after action of operator
         do k=0,3
-            st(plqt(k,q))=iq2ns(k,jjq)
+            st(plqt(k,q))=iq2ns(k,jjq) !update. you need to update here so that the next vertex operator
+            !that links to the PROPAGATED spins will 'see' the correct state of the spins.
+            !this is necessary for the "vert(ii) = vxcode(o,iiq)" line for the subsequent operators
+            !to store the correct vertex number.
         enddo
-!        pos(ii)=q
+!       pos(ii)=q
         p0=last(s0)
         p1=last(s1)
         p2=last(s2)
         p3=last(s3)
         if (p0/=-1) then
-            link(p0)=i0
+            link(p0)=i0 !if the spin is last linked to something, then establish the link
             link(i0)=p0
         else
             frst(s0)=i0
@@ -262,15 +265,15 @@ do p=1,l
         last(s2)=i2+4
         last(s3)=i3+4
         ii=ii+1
-        i0=i0+8
-        i1=i1+8
+        i0=i0+8 !i0 i1 i2 i3 are labelling ONLY the sites in the linked list
+        i1=i1+8 !in ascending order
         i2=i2+8
         i3=i3+8
     endif
   enddo
-do s0=1,nn
-    i0=frst(s0)
-    if (i0/=-1) then
+do s0=1,nn !now link the first and last ones together
+    i0=frst(s0) !before this, all in between vertices are linked, except for the first and last
+    if (i0/=-1) then !check if this site even has an operator acting on it throughout the propagation, if not ignore
         p0=last(s0)
         link(p0)=i0
         link(i0)=p0
@@ -284,6 +287,11 @@ end subroutine linkoper
 !=========================!
 subroutine updloop(passed)
 !=========================!
+
+!changes in the configuration is achieved with the loop update, when we traversed the linked list
+!ACROSS periodic boundary conditions, i.e going from |\alpha(M)> to |\alpha(0)> state or vice-versa.
+!this WILL change the intial and final configurations TOGETHER, but they will continue to remain the same.
+
 use blink; use hyzer; implicit none
 
 integer :: i
@@ -298,26 +306,26 @@ ml=100*l
 nv=0
 do i=1,nl
     nv1=0
-    p0=min(int(rndm()*n8),n8-1)
+    p0=min(int(rndm()*n8),n8-1) !pick a random vertex leg
     p1=p0
-    vx0=vert(p0/8)
-    ic0=mod(p0,8)
-    is0=vxleg(ic0,vx0)
+    vx0=vert(p0/8) !get vertex number
+    ic0=mod(p0,8) !get an in leg number (between 0 to 7?)
+    is0=vxleg(ic0,vx0) !get the site status of that leg, i.e is it filled or unfilled
     do j=1,ml
         vp=p1/8
         vx=vert(vp)
-        ic=mod(p1,8)
+        ic=mod(p1,8) !again calculate in leg number
         r=rndm()
         do oc=0,6
-            if (r.le.vxprb(oc,ic,vx)) goto 10
+            if (r.le.vxprb(oc,ic,vx)) goto 10 !if we accept a probability to exit from a certain leg, goto 10
         enddo
         oc=7
-10      vert(vp)=vxnew(oc,ic,vx)
+10      vert(vp)=vxnew(oc,ic,vx) !update the vertex number
         p1=8*vp+oc
         nv=nv+1
         if (p1==p0) goto 20
-        p1=link(p1)
-        if (p1==p0) goto 20
+        p1=link(p1) !traverse the linked list to the next leg that is linked
+        if (p1==p0) goto 20 !if the link is closed, go to 20
      enddo
      passed=.false.
      return
@@ -325,24 +333,28 @@ do i=1,nl
 !    if (lopers > 100*l) exit
 enddo
 j=0
-do i=1,l
+do i=1,l !after loop update is done, update the gstring to reflect the change in operators
     if (gstring(i) /= 0) then
-        gstring(i)=7*(gstring(i)/7)+vxoper(vert(j))
-        j=j+1
+        gstring(i)=7*(gstring(i)/7)+vxoper(vert(j)) !here you can see that gstring(i) mod 7 gives the operator number (0-5)
+        j=j+1 !this is going over all the operators in the propagation we labelled earlier, 1,2,3....
     endif
 enddo
 
 
 do i=1,nn
     if (frst(i) /= -1) then
-        ic=mod(frst(i),4)
-        vp=frst(i)/8
-        st(i)=vxleg(ic,vert(vp))
+        ic=mod(frst(i),4) !this step gets the in-leg index (0-3)
+        vp=frst(i)/8 !gets the index of the operator (1,2,3....) if you look at how i0 and ii scales, this works
+        st(i)=vxleg(ic,vert(vp)) !i think this doesnt change the value at st(i) at all..?
         if ((st(i) .lt. 0) .or. (st(i) .gt. 1)) then
-            write(*,*)'wrong state',i,vp,ic,vert(vp)
+            write(*,*)'wrong state',i,vp,ic,vert(vp), st(i)
         endif
     else
-        if (rndm().lt.0.5) st(i)= 1-st(i)
+        if (rndm().lt.0.5) st(i)= 1-st(i) !how does this ensure the initial and final config is same..?
+        !ans: turns out even if this else statement is removed, the SSE algorithm still works.
+        !ultimately it does not matter, because this else statement is only triggered if that spin state
+        !has NO operators acting on it at all in the propagation, i.e even if you flip it,
+        !the initial and final state will remain unchanged, hence |alpha(0)> = !alpha(M> periodicity is fulfilled
         endif
 enddo
 nloops=nloops+dble(nl)

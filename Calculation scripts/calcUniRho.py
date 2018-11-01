@@ -6,7 +6,7 @@ import math
 import csv
 class getItems():
 	def __init__(self):
-		self.possible_dattype = ['rho','rhotp','rhot']
+		self.possible_dattype = ['rho','rhotp','rhot','curr_single','curr_pair']
 
 	def get_individual_type(self,pwd,each,dattype):
 		individual_dir = "".join([pwd,'/',each,'/',dattype,'.dat'])
@@ -100,12 +100,14 @@ class getItems():
 		#calculate mean, go through all items, for each item.
 		#minus mean, square sum it divide 90
 		mean = self.calculate_mean(array_of_items)
+		counter = 0
 		for index,value in enumerate(array_of_items):
 			value = value-mean
 			value *= value
 			array_of_items[index] = value
+			counter += 1
 		sum_of_squared = sum(array_of_items)
-		divide_of_sum = float(sum_of_squared/90)
+		divide_of_sum = float(sum_of_squared/(counter*(counter-1)))
 		sqrt_of_divided = math.sqrt(divide_of_sum)
 		return sqrt_of_divided
 
@@ -120,6 +122,10 @@ class getItems():
 			csv_List = [["mu","rhotp mean","STDEV"]]
 		elif dattype == "stgpipi":
 			csv_List = [["mu","ssa mean","STDEV"]]
+		elif dattype == "curr_single":
+			csv_List = [["mu","single current","STDEV"]]
+		elif dattype == "curr_pair":
+			csv_List = [["mu","pair current","STDEV"]]
 
 		return csv_List
 
@@ -142,9 +148,9 @@ class getItems():
 			print ("done")
 
 if __name__ == "__main__":
-	accepted_inputs = ['uni','rho','rhot','rhotp','stgpipi']
+	accepted_inputs = ['uni','rho','rhot','rhotp','stgpipi','curr_single','curr_pair']
 	while True:
-		text = input("Enter a type of .dat file (uni|rho|rhot|rhotp|stgpipi): ")
+		text = input("Enter a type of .dat file (uni|rho|rhot|rhotp|stgpipi,curr_single,curr_pair): ")
 		if text in accepted_inputs:
 			break
 
