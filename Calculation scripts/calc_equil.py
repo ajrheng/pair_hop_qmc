@@ -7,15 +7,22 @@ import pandas as pd
 import numpy as np
 
 def main(type,steps):
-	dataframe =  pd.read_csv("sf_equil.dat",sep='\t',names=['step no','pipi','pi 0'])
-
+	if type == "pipi":
+		dataframe =  pd.read_csv("sf_equil.dat",sep='\s+',names=['step no','pipi','pi 0'])
+		sf = list(dataframe['pipi'])
+	elif type == "pi 0":
+		dataframe =  pd.read_csv("sf_equil.dat",sep='\s+',names=['step no','pipi','pi 0'])
+		sf = list(dataframe['pi 0'])
+	elif type == "rhot":
+		dataframe =  pd.read_csv("rho_equil.dat",sep='\s+',names=['step no','rhot','rhotp'])
+		sf = list(dataframe['rhot'])
+	elif type == "rhotp":
+		dataframe =  pd.read_csv("rho_equil.dat",sep='\s+',names=['step no','rhot','rhotp'])
+		sf = list(dataframe['rhotp'])
+		print(np.mean(sf[-60000:]))
 	step_no = list(dataframe['step no'])
 
-	if type is 'pipi':
-		sf = list(dataframe['pipi'])
-	elif type is 'pi 0':
-		sf = list(dataframe['pi 0'])
-
+	outputfile = "".join([type,'.csv'])
 	csv_list = []
 
 	i=0
@@ -24,19 +31,18 @@ def main(type,steps):
 			csv_list.append([step_no[i],sf[i]])
 		i+=1
 
-	with open('sf_equil.csv','w') as csvFile:
+
+	with open(outputfile,'w') as csvFile:
 		writer = csv.writer(csvFile)
 		writer.writerows(csv_list)
-		print ("done")
+		print ("done with ",outputfile)
 
 if __name__ == "__main__":
-	sf_type = ['pipi', 'pi 0']
+	accepted_type = ['pipi', 'pi 0','rhot','rhotp']
 	while True:
-		type = input('What sf do you wanna calculate (pipi or pi 0): ')
-		if type in sf_type:
-			while True:
-				steps = input('In what step no intervals do you wanna calculate: ')
-				if isinstance(steps,int):
-					break
+		steps = input('In what step no intervals do you wanna calculate: ')
+		steps = int(steps)
+		if steps > 0:
 			break
-	main(text,steps)
+	for items in accepted_type:
+		main(items,steps)
