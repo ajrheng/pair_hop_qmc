@@ -6,7 +6,7 @@ import math
 import csv
 class getItems():
 	def __init__(self):
-		self.possible_dattype = ['rho','rhotp','rhot','curr_single','curr_pair']
+		self.possible_dattype = ['rho','rhotp','rhot']
 
 	def get_individual_type(self,pwd,each,dattype):
 		individual_dir = "".join([pwd,'/',each,'/',dattype,'.dat'])
@@ -148,9 +148,9 @@ class getItems():
 			print ("done")
 
 if __name__ == "__main__":
-	accepted_inputs = ['uni','rho','rhot','rhotp','stgpipi','curr_single','curr_pair']
+	accepted_inputs = ['uni','rho','rhot','rhotp','stgpipi']
 	while True:
-		text = input("Enter a type of .dat file (uni|rho|rhot|rhotp|stgpipi,curr_single,curr_pair): ")
+		text = input("Enter a type of .dat file (uni|rho|rhot|rhotp|stgpipi): ")
 		if text in accepted_inputs:
 			break
 

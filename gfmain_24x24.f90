@@ -161,7 +161,7 @@ integer :: k1,k2
 
 do k1=0,nx
     do k2=0,nx
-        strFact(k1,k2) = strFact(k1,k2)+strFactTemp(k1,k2)/dble(nruns*nn)
+        strFact(k1,k2) = strFact(k1,k2)+strFactTemp(k1,k2)/dble(nruns*nn*nn)
     enddo
 enddo
 

@@ -178,12 +178,12 @@ umag=umag+dble(su)/dble(nn)
 sxu=sxu+beta*(dble(su)**2)/dble(nn)
 ssa=ssa+sstr
 sxa=sxa+beta*ssus
-rhox=rhox+3.d0/4*(dble(jjx)**2)/(dble(nn)*beta)
-rhoy=rhoy+3.d0/4*(dble(jjy)**2)/(dble(nn)*beta)
-rhotx=rhotx+3.d0/4*(dble(jjtx)**2)/(dble(nn)*beta)
-rhoty=rhoty+3.d0/4*(dble(jjty)**2)/(dble(nn)*beta)
-rhotpx=rhotpx+3.d0/4*(dble(jjtpx)**2)/(dble(nn)*beta)
-rhotpy=rhotpy+3.d0/4*(dble(jjtpy)**2)/(dble(nn)*beta)
+rhox=rhox+(dble(jjx)**2)/(dble(nn)*beta)
+rhoy=rhoy+(dble(jjy)**2)/(dble(nn)*beta)
+rhotx=rhotx+(dble(jjtx)**2)/(dble(nn)*beta)
+rhoty=rhoty+(dble(jjty)**2)/(dble(nn)*beta)
+rhotpx=rhotpx+(dble(jjtpx)**2)/(dble(nn)*beta)
+rhotpy=rhotpy+(dble(jjtpy)**2)/(dble(nn)*beta)
 
 end subroutine dupdate
 !=======================================!
