@@ -27,7 +27,7 @@ class getItems():
 					items_removed.append(int(m))
 				else:#if Vd has decimal eg. 13.4
 					items_removed.append(m)
- 
+
 		items_removed = sorted(items_removed)
 		for index,truncated in enumerate(items_removed):
 			items_removed[index] = "Vd="+str(truncated)
@@ -49,7 +49,7 @@ class getItems():
 					if dattype== "zeropi" or dattype =="pizero":
 						if counter==8:
 							stgList+=float(item)
-						if counter==136:
+						if counter==136: #L+1 * L/2, i.e 17*8
 							stgList+=float(item)
 					elif dattype == "pipi":
 						if counter==144:

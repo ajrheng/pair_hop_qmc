@@ -27,7 +27,7 @@ class getItems():
 					items_removed.append(int(m))
 				else:#if mu has decimal eg. 13.4
 					items_removed.append(m)
- 
+
 		items_removed = sorted(items_removed)
 		for index,truncated in enumerate(items_removed):
 			items_removed[index] = "mu="+str(truncated)
@@ -55,11 +55,11 @@ class getItems():
 						if counter==40:
 							stgList=float(item)
 					counter+=1
-								
+
 				dict_to_append["subfolder"] = float(each[3:])
 				#dict_to_append["mean"] = mean
 				#dict_to_append["sd"] = sd
-				dict_to_append["stg"] = stgList			
+				dict_to_append["stg"] = stgList
 
 				return_list.append(dict_to_append)
 
@@ -85,7 +85,7 @@ class getItems():
 
 		for row in array_of_calculations:
 			csv_List.append([row['subfolder'],row['stg']])
-		
+
 		csvfilename = self.get_file_name(pwd,dattype)
 
 		with open(csvfilename,'w') as csvFile:
