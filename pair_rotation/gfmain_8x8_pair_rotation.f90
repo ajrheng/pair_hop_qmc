@@ -2,14 +2,15 @@
 module hyzer
 save
 
-integer, parameter :: nx=12, ny=12, nn=nx*ny, nq=nn, nb=2*nn, nn2=nn*nn
+integer, parameter :: nx=8, ny=8, nn=nx*ny, nq=nn, nb=2*nn, nn2=nn*nn
 real(8), parameter :: z=4.d0 ! 2*nb/nn
 
-integer,parameter :: nvx=52, ivmax=2**8 - 1
+integer,parameter :: nvx=62, ivmax=2**8 - 1
+integer,parameter :: no_of_op = 11
 
 integer,parameter :: ntau=100
 
-real(8) :: vv,tt,tp,mu,beta,vv2
+real(8) :: vv,tt,tp,tr,tex,mu,beta,vv2
 integer :: istep,mstep,nruns,equ
 
 integer :: xy(2,nn),xy1(0:nx-1,0:ny-1)
@@ -20,8 +21,8 @@ integer :: ns2iq(0:3,0:3,0:3,0:3),iq2ns(0:3,0:15)
 integer :: plqt(0:3,nq),btyp(nb),phase(nn)
 real(8) :: amax,wgt(0:15),awgt(0:15),dwgt(0:15)
 
-integer :: vxoper(nvx),vxcode(0:6,0:15),vxleg(0:7,nvx)
-integer :: vxnew(0:7,0:7,nvx),op(0:6,0:15)
+integer :: vxoper(nvx),vxcode(0:no_of_op,0:15),vxleg(0:7,nvx)
+integer :: vxnew(0:7,0:7,nvx),op(0:no_of_op,0:15)
 integer :: vtyp(nvx),ivx(0:ivmax),vxi(nvx)
 real(8) :: vxprb(0:7,0:7,nvx),corr(1:nn,1:nn),strFactTemp(0:nx,0:nx),strFact(0:nx,0:nx)
 !corr and strFactTemp survives between msteps, strFact writes averaged
@@ -257,6 +258,8 @@ use hyzer;    implicit none
 open (unit=10,file='read.in',status='old')
 read(10,*)tt!1
 read(10,*)tp!start with 0
+read(10,*)tr!pair rotation term
+read(10,*)tex!ring exchange term
 read(10,*)vv!2,3
 read(10,*)vv2
 read(10,*)mu!2,3,4...
