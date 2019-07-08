@@ -4,11 +4,15 @@ subroutine simulation
 use hyzer; implicit none
 
 integer :: i,j
+real(8) :: beta_store
 
 call lattice
 call pvect0
 call vxweight
 call initvrtx
+
+beta_store = beta
+beta = 1.d0
 
 if (istep.ne.0) then
     open(12,file='log.txt',status='unknown',access='append')
@@ -17,9 +21,16 @@ if (istep.ne.0) then
     lopers=0.d0
     nloops=0.d0
     do i=1,istep
+
         call mcstep(0)
         call adjstl
         if (mod(i,istep/20).eq.0) call adjnl
+        if ((mod(i,3000)==0) .and. (beta < beta_store))  then
+            beta = beta + 1.d0
+            open(12,file='log.txt',status='unknown',access='append')
+            write(12,*)'beta= ',beta
+            close(12)
+        endif
     enddo
     open(12,file='log.txt',status='unknown',access='append')
     write(12,*)'Completed equilibration: L = ',l
@@ -508,7 +519,7 @@ do i=1,nvx
             enddo
             if (ivx(iiv)/=-1) then !if such a valid vertex exists, meaning not making some illegal update
                 vxnew(oc,ic,i)=ivx(iiv) !vxnew array takes oc (out spin), ic (in spin) and vertex number and gives you resulting vertex
-                o=vxoper(ivx(iiv)) !gives you operator type (0 for diagonal, 1,2,3,4 for single hop, 5,6 for pair hop)
+                o=vxoper(ivx(iiv)) !gives you operator type (0 for diagonal, 1,2,3,4 for single hop, 5,6 for pair hop, 7,8,9,10 for pair rotation, 11 for ring exchange)
                 if (o==0) then
                     iq=0
                     do k=0,3
@@ -534,7 +545,7 @@ do i=1,nvx
                     else
                         ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=1
                     endif
-                else
+                elseif (o==5 .or. o==6) then
                     vxprb(oc,ic,i)=tp !if pair hop then proportional to tp
                     if (o==5 .and. ns1(1)<ns1(2)) then
                         ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-2
@@ -545,6 +556,10 @@ do i=1,nvx
                     else
                         ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-2
                     endif
+                elseif (o==7 .or. o==8 .or. o==9 .or. o==10) then
+                    vxprb(oc,ic,i) = tr !if pair rotation then proportional to tr
+                elseif (o==11) then
+                    vxprb(oc,ic,i) = tex !if ring exchange then proportional to tex
                 endif
             endif
             ns1(:)=ns2(:) !you want to undo the out spin flip, because you are looping to try the next outspin.

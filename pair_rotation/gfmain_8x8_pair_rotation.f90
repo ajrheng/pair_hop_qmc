@@ -54,7 +54,7 @@ use hyzer; implicit none
 
 call read_params
 write(*,*)'read params'
-write(*,*)"tt: ",tt,"tp: ",tp,"vv: ",vv,"vv2: ",vv2,"mu: ",mu,"beta: ",beta
+write(*,*)"tt: ",tt,"tp: ",tp,"tr: ",tr,"tex: ",tex,"vv: ",vv,"vv2: ",vv2,"mu: ",mu,"beta: ",beta
 
 call initran
 call initconf

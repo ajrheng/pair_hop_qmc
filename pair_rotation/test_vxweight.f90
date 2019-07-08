@@ -271,8 +271,10 @@ do iq=0,15
         if( ((ns1(i)/= ns1(j_next) .and. ns1(i) == ns1(j_before)) &
         .or. (ns1(i) == ns1(j_next) .and. ns1(i) /= ns1(j_before))) &
         .and. (ns1(0) + ns1(1) + ns1(2) + ns1(3)) == 2 .and. ns1(i) == 1) then !if the next site is not the same as the previous site, single hop to that site
+            write(*,*) ns1(0), ns1(1), ns1(2), ns1(3)
             ns1(j_before+4)=1-ns(j_before) !flip
             ns1(j_next+4)=1-ns(j_next) !flip. after these two flips, a pair rotation has occured
+            write(*,*) ns1(4), ns1(5), ns1(6), ns1(7)
             iiv=0
             do k=0,7
                 iiv=iiv+ns1(k)*(2**k) !this encodes it as a binary 2 bit number. 2^0 + 2^1 + ...
@@ -286,6 +288,8 @@ do iq=0,15
             op(i+7,iq)=jq; vxoper(nv)=i+7 !act operator number i+7 on initial plaquette config iq gives jq
             vxcode(i+7,iq)=nv !given operator number (i+7) and the initial state iq, you know what vertex number it is referring to
             !adding 7 gives the range 7-10, since i = 0-3.
+            write(*,*)"o for this= ", i+7
+            write(*,*)
             do k=0,7
                 vxleg(k,nv)=ns1(k)
             enddo
@@ -341,10 +345,8 @@ enddo
 !the array out, these numbers beyond the bounds of the array are chopped off.
 !they probably remain in the memory somewhere, though.
 
-
 end subroutine vxweight
 !==================================!
-
 program main
 use hyzer ; implicit none
 
