@@ -128,7 +128,7 @@ module blink
                 jjy=jjy+ctra(o,ss1,ss2,ss3,ss4)
                 jjtpy=jjtpy+ctra(o,ss1,ss2,ss3,ss4)
                 np=np+1 !number of pair hop operators increase
-            else
+            elseif (o==6) then
                 tt1=1-ss1; tt2=1-ss2; tt3=1-ss3; tt4=1-ss4
                 jjx=jjx+ctra(o,ss1,ss2,ss3,ss4)
                 jjtpx=jjtpx+ctra(o,ss1,ss2,ss3,ss4)

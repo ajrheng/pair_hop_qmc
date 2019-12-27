@@ -66,14 +66,14 @@ do i=1,l
         addp=beta*dble(nq)/dble(l-nh) !l is like M, the expansion cutoff in the series expansion, nh is like n, the number of non-identity operators
         p=awgt(iiq)*addp
         if (p >= 1.d0) then
-            gstring(i)=7*q !insert diagonal operator
+            gstring(i)=12*q !insert diagonal operator
             nh=nh+1 !count diagonal operators
         elseif (rndm() <= p) then !similarly insert diagonal operator
-            gstring(i)=7*q
+            gstring(i)=12*q
             nh=nh+1
         endif
-    elseif (mod(ii,7) == 0) then !if there already exists a diagonal operator there
-        q=ii/7 !get the plaquette
+    elseif (mod(ii,12) == 0) then !if there already exists a diagonal operator there
+        q=ii/12 !get the plaquette
         do k=0,3
             ns(k)=st(plqt(k,q))
         enddo
@@ -90,8 +90,8 @@ do i=1,l
         nu=nu+1
         nh1=nh1+1
     else !if off-diagonal operator
-        q=ii/7
-        o=mod(ii,7)
+        q=ii/12
+        o=mod(ii,12)
         do k=0,3
             ns(k)=st(plqt(k,q))
         enddo
@@ -213,8 +213,8 @@ vert(:)=-1;  link(:)=-1
 
 do p=1,l
     if (gstring(p)/=0) then !if not identity operator
-        o=mod(gstring(p),7)
-        q=gstring(p)/7
+        o=mod(gstring(p),12)
+        q=gstring(p)/12
         s0=plqt(0,q)
         s1=plqt(1,q)
         s2=plqt(2,q)
@@ -326,16 +326,16 @@ do i=1,nl
         if (p1==p0) goto 20
         p1=link(p1) !traverse the linked list to the next leg that is linked
         if (p1==p0) goto 20 !if the link is closed, go to 20
-     enddo
-     passed=.false.
-     return
+    enddo
+    passed=.false.
+    return
 20   lopers=lopers+dble(nv)
 !    if (lopers > 100*l) exit
 enddo
 j=0
 do i=1,l !after loop update is done, update the gstring to reflect the change in operators
     if (gstring(i) /= 0) then
-        gstring(i)=7*(gstring(i)/7)+vxoper(vert(j)) !here you can see that gstring(i) mod 7 gives the operator number (0-6)
+        gstring(i)=12*(gstring(i)/12)+vxoper(vert(j)) !here you can see that gstring(i) mod 7 gives the operator number (0-6)
         j=j+1 !this is going over all the operators in the propagation we labelled earlier, 1,2,3....
     endif
 enddo
