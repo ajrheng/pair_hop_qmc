@@ -11,6 +11,9 @@ num_vx = 52 #num possible vertex
 ivmax = 2 ** 8 - 1 #???
 ntau = 100
 
+wgt = np.zeros(16,dtype=np.float64)
+awgt = np.zeros(16,dtype=np.float64)
+dwgt =np.zeros(16,dtype=np.float64)
 
 l = 20 #initial length of opstring and related arrays
 state = np.zeros(nn,dtype=np.int8) #create 1D array
@@ -65,3 +68,32 @@ for iq in range(0,16):
     iq2ns[3,iq] = ns3
 
 #==============================================================
+
+#==================pvect0======================================
+max_wgt = 0
+
+vv = 1; mu = 1; vv2=1
+
+for iq in range(16):
+    s1 = iq2ns[0,iq]
+    s2 = iq2ns[1,iq]
+    s3 = iq2ns[2,iq]
+    s4 = iq2ns[3,iq]
+    wgt[iq] = vv * float(s1*s2 + s2*s3 + s3*s4 + s4*s1) #nearest neighbor repulsion
+    wgt[iq]  = wgt[iq] + vv2 * float(s1*s3 + s2*s4) #next nearest neighbor repulsion
+    wgt[iq] = wgt[iq] - mu * float(s1+s2+s3+s4)/z
+    
+    if wgt[iq] > max_wgt:
+        max_wgt = wgt[iq]
+
+max_wgt = max_wgt + 1
+for iq in range(16):
+    awgt[iq] = max_wgt - wgt[iq]
+    print(awgt[iq],iq)
+    if awgt[iq] > 1e-6:
+        dwgt[iq] = 1/awgt[iq]
+    else:
+        dwgt[iq] = 1e6
+
+
+
