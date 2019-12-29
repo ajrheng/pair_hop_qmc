@@ -7,13 +7,20 @@ nq = nn #num of plaquettes
 nb = 2 * nn #num of bonds
 z = 4 #coordination number
 
-num_vx = 52 #num possible vertex
-ivmax = 2 ** 8 - 1 #???
+num_vx = 52 #num non-illegal vertices, aka nvx
+tot_vx = 2 ** 8 - 1 #num of vertices, including illegal ones, aka ivmax
 ntau = 100
 
 wgt = np.zeros(16,dtype=np.float64)
 awgt = np.zeros(16,dtype=np.float64)
 dwgt =np.zeros(16,dtype=np.float64)
+vx_num_from_int = np.zeros(tot_vx,dtype=np.int64) #ivx
+int_from_vx_num = np.zeros(num_vx,dtype=np.int64) #vxi
+op = np.zeros((7,16),dtype=np.int64)
+oper_from_vx_num = np.zeros(num_vx,dtype=np.int64) #vxoper
+vx_num_aft_op = np.zeros((7,16),dtype=np.int64) #vxcode
+vx_leg = np.zeros((8,num_vx),dtype=np.int64) 
+
 
 l = 20 #initial length of opstring and related arrays
 state = np.zeros(nn,dtype=np.int8) #create 1D array
@@ -89,11 +96,32 @@ for iq in range(16):
 max_wgt = max_wgt + 1
 for iq in range(16):
     awgt[iq] = max_wgt - wgt[iq]
-    print(awgt[iq],iq)
     if awgt[iq] > 1e-6:
         dwgt[iq] = 1/awgt[iq]
     else:
         dwgt[iq] = 1e6
 
+#================vxweight================================
 
+ns = np.zeros(8,dtype=np.int64)
+vx_count = 0
+
+for iq in range(16):
+    for i in range(3):
+        ns[i] = iq2ns[i,iq]
+        ns[i+4] = ns[i]
+    
+    print(ns)
+
+    vx_int = 0
+    for i in range(8):
+        vx_int = vx_int + ns[i] * (2**i)
+    vx_count += 1
+    vx_num_from_int[vx_int] = vx_count
+    int_from_vx_num[vx_count] = vx_int
+    op[0,iq] = iq
+    oper_from_vx_num[vx_count] = 0
+    vx_num_aft_op[0,iq] = vx_count
+    for i in range(8):
+        vx_leg[i,vx_count] = ns[i]
 
