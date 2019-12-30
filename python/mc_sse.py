@@ -111,17 +111,44 @@ for iq in range(16):
         ns[i] = iq2ns[i,iq]
         ns[i+4] = ns[i]
     
-    print(ns)
-
     vx_int = 0
-    for i in range(8):
-        vx_int = vx_int + ns[i] * (2**i)
+    for k in range(8):
+        vx_int = vx_int + ns[k] * (2**k)
     vx_count += 1
     vx_num_from_int[vx_int] = vx_count
     int_from_vx_num[vx_count] = vx_int
     op[0,iq] = iq
     oper_from_vx_num[vx_count] = 0
     vx_num_aft_op[0,iq] = vx_count
-    for i in range(8):
-        vx_leg[i,vx_count] = ns[i]
+    for k in range(8):
+        vx_leg[k,vx_count] = ns[k]
 
+#single boson hopping vertices
+for iq in range(16):
+    ns[:] = 0
+    for i in range(4):
+        ns[i] = iq2ns[i,iq]
+        ns[i+4] = ns[i]
+
+    for i in range(4):
+        ns_temp = np.copy(ns) #shallow copy
+        j = (i+1) % 4
+        if ns_temp[i] != ns_temp[j]:
+            ns_temp[i+4] = 1-ns[i]
+            ns_temp[j+4] = 1-ns[j]
+
+
+            vx_int = 0
+            for k in range(8):
+                vx_int = vx_int + ns_temp[k] * (2**k)
+            vx_count += 1
+            vx_num_from_int[vx_int] = vx_count 
+            int_from_vx_num[vx_count] = vx_int
+            jq = 0
+            for k in range(4):
+                jq = jq + ns_temp[k+4] * (2**k)
+            op[i+1,iq] = jq
+            oper_from_vx_num[vx_count] = i+1
+            vx_num_aft_op[i+1,iq] = vx_count
+            for k in range(8):
+                vx_leg[k,vx_count] = ns_temp[k]
