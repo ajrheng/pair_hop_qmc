@@ -15,11 +15,15 @@ wgt = np.zeros(16,dtype=np.float64)
 awgt = np.zeros(16,dtype=np.float64)
 dwgt =np.zeros(16,dtype=np.float64)
 vx_num_from_int = np.zeros(tot_vx,dtype=np.int64) #ivx
+vx_num_from_int[:] = -1 #-1 to indicate it is an invalid vertex
 int_from_vx_num = np.zeros(num_vx,dtype=np.int64) #vxi
 op = np.zeros((7,16),dtype=np.int64)
 oper_from_vx_num = np.zeros(num_vx,dtype=np.int64) #vxoper
 vx_num_aft_op = np.zeros((7,16),dtype=np.int64) #vxcode
 vx_leg = np.zeros((8,num_vx),dtype=np.int64) 
+vx_new = np.zeros((8,8,num_vx),dtype=np.int64)
+vx_prob = np.zeros((8,8,num_vx),dtype=np.int64)
+ctra = np.zeros((7,2,2,2,2),dtype=np.int64)
 
 
 l = 20 #initial length of opstring and related arrays
@@ -79,7 +83,7 @@ for iq in range(0,16):
 #==================pvect0======================================
 max_wgt = 0
 
-vv = 1; mu = 1; vv2=1
+vv = 1; mu = 1; vv2=1; t = 1; tp =1
 
 for iq in range(16):
     s1 = iq2ns[0,iq]
@@ -104,7 +108,9 @@ for iq in range(16):
 #================vxweight================================
 
 ns = np.zeros(8,dtype=np.int64)
-vx_count = 0
+vx_count = -1 #you want the first vertex to be 0 indexed.
+#in the fortran code it didnt matter because fortran does not enforce
+#strict array indexing. so no array out of bounds error for the last index.
 
 for iq in range(16):
     for i in range(3):
@@ -152,3 +158,152 @@ for iq in range(16):
             vx_num_aft_op[i+1,iq] = vx_count
             for k in range(8):
                 vx_leg[k,vx_count] = ns_temp[k]
+
+#pair hopping vertices
+for iq in range(16):
+    ns[:] = 0
+    for i in range(4):
+        ns[i] = iq2ns[i,iq]
+        ns[i+4] = ns[i]
+
+    if ns[0] == 0 and ns[1] == 0 and ns[2] == 1 and ns[3] == 1:
+        ns[4] = 1; ns[5] =1; ns[6] = 0; ns[7] = 0
+        vx_int = 0
+        for k in range(8):
+            vx_int = vx_int + ns[k] * (2**k)
+        vx_count += 1
+        vx_num_from_int[vx_int] = vx_count 
+        int_from_vx_num[vx_count] = vx_int
+        jq = 0
+        for k in range(4):
+            jq = jq + ns[k+4] * (2**k)
+        op[5,iq] = jq
+        oper_from_vx_num[vx_count] = 5
+        vx_num_aft_op[5,iq] = vx_count
+        for k in range(8):
+            vx_leg[k,vx_count] = ns[k]
+
+    elif ns[0] == 1 and ns[1] == 1 and ns[2] == 0 and ns[3] == 0:
+        ns[4] = 0; ns[5] =0; ns[6] = 1; ns[7] = 1
+        vx_int = 0
+        for k in range(8):
+            vx_int = vx_int + ns[k] * (2**k)
+        vx_count += 1
+        vx_num_from_int[vx_int] = vx_count 
+        int_from_vx_num[vx_count] = vx_int
+        jq = 0
+        for k in range(4):
+            jq = jq + ns[k+4] * (2**k)
+        op[5,iq] = jq
+        oper_from_vx_num[vx_count] = 5
+        vx_num_aft_op[5,iq] = vx_count
+        for k in range(8):
+            vx_leg[k,vx_count] = ns[k]
+
+    elif ns[0] == 1 and ns[1] == 0 and ns[2] == 0 and ns[3] == 1:
+        ns[4] = 0; ns[5] =1; ns[6] = 1; ns[7] = 0
+        vx_int = 0
+        for k in range(8):
+            vx_int = vx_int + ns[k] * (2**k)
+        vx_count += 1
+        vx_num_from_int[vx_int] = vx_count 
+        int_from_vx_num[vx_count] = vx_int
+        jq = 0
+        for k in range(4):
+            jq = jq + ns[k+4] * (2**k)
+        op[6,iq] = jq
+        oper_from_vx_num[vx_count] = 6
+        vx_num_aft_op[6,iq] = vx_count
+        for k in range(8):
+            vx_leg[k,vx_count] = ns[k]
+
+    elif ns[0] == 0 and ns[1] == 1 and ns[2] == 1 and ns[3] == 0:
+        ns[4] = 1; ns[5] =0; ns[6] = 0; ns[7] = 1
+        vx_int = 0
+        for k in range(8):
+            vx_int = vx_int + ns[k] * (2**k)
+        vx_count += 1
+        vx_num_from_int[vx_int] = vx_count 
+        int_from_vx_num[vx_count] = vx_int
+        jq = 0
+        for k in range(4):
+            jq = jq + ns[k+4] * (2**k)
+        op[6,iq] = jq
+        oper_from_vx_num[vx_count] = 6
+        vx_num_aft_op[6,iq] = vx_count
+        for k in range(8):
+            vx_leg[k,vx_count] = ns[k]
+
+#====================================================
+
+#======================initvrtx=====================
+for i in range(num_vx):
+    ns[:] = 0
+    vx_int1 = int_from_vx_num[i]
+    for j in range(8):
+        ns[j] = vx_int1 % 2; vx_int1 = vx_int1//2
+    
+    for in_leg in range(8):
+        ns_temp1 = np.copy(ns)
+        ns_temp1[in_leg] = 1-ns_temp1[in_leg]
+        ns_temp2 = np.copy(ns_temp1)
+
+        for out_leg in range(8):
+            ns_temp1[out_leg] = 1-ns_temp1[out_leg]
+            vx_int2 = 0
+            for k in range(8):
+                vx_int2 = vx_int2 + ns_temp1[k] * (2**k)
+            if vx_num_from_int[vx_int2] != -1:
+                vx_new[out_leg,in_leg,i] = vx_num_from_int[vx_int2]
+                oper = oper_from_vx_num[vx_num_from_int[vx_int2]]
+
+                if oper == 0:
+                    vx_int3 = 0
+                    for k in range(4):
+                        vx_int3 = vx_int3 + ns_temp1[k] * (2**k)
+                    vx_prob[out_leg, in_leg, i] = awgt[vx_int3]
+                
+                elif oper == 1 or oper == 2 or oper ==3 or oper == 4:
+                    vx_prob[out_leg,in_leg,i] = t
+                    if oper ==1 and (ns_temp1[1] > ns_temp1[0]):
+                        ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = -1
+                    elif oper ==1 and (ns_temp1[1] < ns_temp1[0]):
+                        ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = 1
+                    elif oper==2 and (ns_temp1[2] > ns_temp1[1]):
+                        ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = -1
+                    elif oper==2 and (ns_temp1[2] < ns_temp1[1]):
+                        ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = 1
+                    elif oper==3 and (ns_temp1[3] < ns_temp1[2]):
+                        ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = 1
+                    elif oper==3 and (ns_temp1[3] > ns_temp1[2]):
+                        ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = -1
+                    elif oper==4 and (ns_temp1[4] < ns_temp1[3]):
+                        ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = -1
+                    else:
+                        ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = 1
+                else:
+                    vx_prob[out_leg,in_leg,i] = tp
+                    if oper == 5 and (ns_temp1[1] < ns_temp1[2]):
+                        ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = -2
+                    elif oper ==5 and (ns_temp1[1] > ns_temp1[2]) :
+                        ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = 2
+                    elif oper == 6 and ns_temp1[0] > ns_temp1[1]:
+                        ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = 2
+                    else:
+                        ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = -2
+            ns_temp1 = np.copy(ns_temp2)
+                
+
+for i in range(num_vx):
+    for in_leg in range(8):
+        for out_leg in range(8):
+            vx_prob[out_leg,in_leg,i] = vx_prob[out_leg,in_leg,i]+ [out_leg-1,in_leg,i]
+
+for i in range(num_vx):
+    for in_leg in range(8):
+        for out_leg in range(8):
+            vx_prob[out_leg,in_leg,i] = vx_prob[out_leg,in_leg,i]/[7,in_leg,i]
+            if vx_prob[out_leg,in_leg,i] < 1e-6:
+                vx_prob[out_leg,in_leg,i] = -1
+
+#======================================================================================

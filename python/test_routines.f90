@@ -203,6 +203,91 @@ do iq=0,15
     enddo
 enddo
 
+do iq=0,15
+    ns(0:7)=0
+    do i=0,3
+        if(btest(iq,i)) ns(i)=1
+        ns(i+4)=ns(i)
+    enddo
+    if((ns(0).eq.0).and.(ns(1).eq.0) &
+        .and.(ns(2).eq.1).and.(ns(3).eq.1)) then
+        ns(4)=1; ns(5)=1; ns(6)=0; ns(7)=0
+        iiv=0
+        do k=0,7
+            iiv=iiv+ns(k)*(2**k)
+        enddo
+        nv=nv+1
+        ivx(iiv)=nv; vxi(nv)=iiv
+        jq=0
+        do k=0,3
+            jq=jq+ns(k+4)*(2**k)
+        enddo
+        op(5,iq)=jq; vxoper(nv)=5
+        vxcode(5,iq)=nv
+        do k=0,7
+            vxleg(k,nv)=ns(k)
+        enddo
+        write(*,*) iiv, nv, jq
+     elseif  ((ns(0).eq.1).and.(ns(1).eq.1) &
+        .and.(ns(2).eq.0).and.(ns(3).eq.0))then
+        ns(4)=0; ns(5)=0; ns(6)=1; ns(7)=1
+        iiv=0
+        do k=0,7
+            iiv=iiv+ns(k)*(2**k)
+        enddo
+        nv=nv+1
+        ivx(iiv)=nv; vxi(nv)=iiv
+        jq=0
+        do k=0,3
+            jq=jq+ns(k+4)*(2**k)
+        enddo
+        op(5,iq)=jq; vxoper(nv)=5
+        vxcode(5,iq)=nv
+        do k=0,7
+            vxleg(k,nv)=ns(k)
+        enddo
+        write(*,*) iiv, nv, jq
+     elseif  ((ns(0).eq.1).and.(ns(1).eq.0) &
+        .and.(ns(2).eq.0).and.(ns(3).eq.1))then
+        ns(4)=0; ns(5)=1; ns(6)=1; ns(7)=0
+        iiv=0
+        do k=0,7
+            iiv=iiv+ns(k)*(2**k)
+        enddo
+        nv=nv+1
+        ivx(iiv)=nv; vxi(nv)=iiv
+        jq=0
+        do k=0,3
+            jq=jq+ns(k+4)*(2**k)
+        enddo
+        op(6,iq)=jq; vxoper(nv)=6
+        vxcode(6,iq)=nv
+        do k=0,7
+            vxleg(k,nv)=ns(k)
+        enddo
+        write(*,*) iiv, nv, jq
+     elseif  ((ns(0).eq.0).and.(ns(1).eq.1) &
+        .and.(ns(2).eq.1).and.(ns(3).eq.0))then
+        ns(4)=1; ns(5)=0; ns(6)=0; ns(7)=1
+        iiv=0
+        do k=0,7
+            iiv=iiv+ns(k)*(2**k)
+        enddo
+        nv=nv+1
+        ivx(iiv)=nv; vxi(nv)=iiv
+        jq=0
+        do k=0,3
+            jq=jq+ns(k+4)*(2**k)
+        enddo
+        op(6,iq)=jq; vxoper(nv)=6
+        vxcode(6,iq)=nv
+        do k=0,7
+            vxleg(k,nv)=ns(k)
+        enddo
+        write(*,*) iiv, nv, jq
+    endif
+enddo
+
 
 end subroutine vxweight
 
