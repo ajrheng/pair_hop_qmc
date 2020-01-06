@@ -100,7 +100,7 @@ use hyzer; implicit none
 integer :: iq,iiq,s1,s2,s3,s4
 
 amax=0.d0; wgt(:)=0.d0; awgt(:)=0.d0; dwgt(:)=0.d0
-vv=1; mu=1; vv2=1
+vv=1; mu=1; vv2=1; tt=1 ;tp = 1
 
 do iq=0,15
     iiq=iq
@@ -227,7 +227,6 @@ do iq=0,15
         do k=0,7
             vxleg(k,nv)=ns(k)
         enddo
-        write(*,*) iiv, nv, jq
      elseif  ((ns(0).eq.1).and.(ns(1).eq.1) &
         .and.(ns(2).eq.0).and.(ns(3).eq.0))then
         ns(4)=0; ns(5)=0; ns(6)=1; ns(7)=1
@@ -246,7 +245,6 @@ do iq=0,15
         do k=0,7
             vxleg(k,nv)=ns(k)
         enddo
-        write(*,*) iiv, nv, jq
      elseif  ((ns(0).eq.1).and.(ns(1).eq.0) &
         .and.(ns(2).eq.0).and.(ns(3).eq.1))then
         ns(4)=0; ns(5)=1; ns(6)=1; ns(7)=0
@@ -265,7 +263,6 @@ do iq=0,15
         do k=0,7
             vxleg(k,nv)=ns(k)
         enddo
-        write(*,*) iiv, nv, jq
      elseif  ((ns(0).eq.0).and.(ns(1).eq.1) &
         .and.(ns(2).eq.1).and.(ns(3).eq.0))then
         ns(4)=1; ns(5)=0; ns(6)=0; ns(7)=1
@@ -284,17 +281,120 @@ do iq=0,15
         do k=0,7
             vxleg(k,nv)=ns(k)
         enddo
-        write(*,*) iiv, nv, jq
     endif
 enddo
 
-
 end subroutine vxweight
+
+subroutine initvrtx
+!==============================!
+use hyzer; implicit none
+
+integer::ns(0:7),i,iiq,ic,oc,iiv,ns1(0:7),k,ns2(0:7),iq,o
+
+vxprb(:,:,:)=0 !vxprb stores the probability of accepting the change
+vxnew(:,:,:)=0
+do i=1,nvx
+    iiq=vxi(i) !retrieve the binary number representing the vertex
+    ns(0)=mod(iiq,2); iiq=iiq/2 !undo the binary number to retrieve the spins
+    ns(1)=mod(iiq,2); iiq=iiq/2
+    ns(2)=mod(iiq,2); iiq=iiq/2
+    ns(3)=mod(iiq,2); iiq=iiq/2
+    ns(4)=mod(iiq,2); iiq=iiq/2
+    ns(5)=mod(iiq,2); iiq=iiq/2
+    ns(6)=mod(iiq,2); iiq=iiq/2
+    ns(7)=mod(iiq,2); iiq=iiq/2
+    do ic=0,7
+        ns1(:)=ns(:)
+        ns1(ic)=1-ns1(ic) !flip in the in spin
+        ns2(:)=ns1(:)
+        do oc=0,7
+            ns1(oc)=1-ns1(oc) !flip the out spin
+            iiv=0
+            do k=0,7
+                iiv=iiv+ns1(k)*(2**k)
+            enddo
+            if (ivx(iiv)/=-1) then !if such a valid vertex exists, meaning not making some illegal update
+                vxnew(oc,ic,i)=ivx(iiv) !vxnew array takes oc (out spin), ic (in spin) and vertex number and gives you resulting vertex
+                o=vxoper(ivx(iiv)) !gives you operator type (0 for diagonal, 1,2,3,4 for single hop, 5,6 for pair hop)
+                if (o==0) then
+                    iq=0
+                    do k=0,3
+                        iq=iq+ns1(k)*(2**k)
+                    enddo
+
+                    vxprb(oc,ic,i)=awgt(iq) !if diagonal operator, no change, then weight is simply weight of that vertex
+                elseif (o==1 .or. o==2 .or. o==3 .or. o==4 ) then
+                    
+                    vxprb(oc,ic,i)=tt !if its single hop, then weight is equal to tt (single hop amplitude)
+                    if (o==1 .and. (ns1(1)>ns1(0))) then
+                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-1 !ctra is the array to calculate stiffness.
+                    elseif (o==1 .and. (ns1(1)<ns1(0))) then !given operator and the initial spin configurations, you know how the spin
+                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=1 !will hop, then you know how to calculate the stiffness accordingly.
+                    elseif (o==2 .and. ns1(2)>ns1(1)) then
+                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-1
+                    elseif (o==2 .and. ns1(2)<ns1(1)) then
+                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=1
+                    elseif (o==3 .and. ns1(3)>ns1(2)) then
+                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=1
+                    elseif (o==3 .and. ns1(3)<ns1(2)) then
+                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-1
+                    elseif (o==4 .and. ns1(3)>ns1(0)) then
+                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-1
+                    else
+                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=1
+                    endif
+                else
+                    counter = counter + 1
+                    vxprb(oc,ic,i)=tp !if pair hop then proportional to tp
+                    if (o==5 .and. ns1(1)<ns1(2)) then
+                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-2
+                    elseif (o==5 .and. ns1(1)>ns1(2)) then
+                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=2
+                    elseif (o==6 .and. ns1(0)>ns1(1)) then
+                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=2
+                    else
+                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-2
+                    endif
+                endif
+            endif
+            ns1(:)=ns2(:) !you want to undo the out spin flip, because you are looping to try the next outspin.
+        enddo
+    enddo
+enddo
+
+
+do i=1,nvx
+    do ic=0,7
+        do oc=1,7
+            vxprb(oc,ic,i)=vxprb(oc,ic,i)+vxprb(oc-1,ic,i)!sum the probabilities so it is easier to decide vertex change or not
+            !eg, vxprb(0,0,1)=0.2,vxprb(1,0,1)=0.2,vxprb(2,0,1)=0.5,vxprb(3,0,1)=0.1. total probability = 1
+            !vxprb(2,0,1)=0.2+0.2+0.5=0.9. Therefore to decide if you accept going in at leg 0, exiting at leg 2 of vertex number 1,
+            !generate random number, if random number <0.9, accept it.
+            
+        enddo
+    enddo
+enddo
+do i=1,nvx
+    do ic=0,7
+        do oc=0,7
+            vxprb(oc,ic,i)=vxprb(oc,ic,i)/vxprb(7,ic,i) !for this step, we normalize all the probabilties, because before
+            if (vxprb(oc,ic,i).lt.1e-6) then
+                vxprb(oc,ic,i)=-1. !we let some probabilities be like tt or tp, and they are >1
+            endif
+        enddo
+    enddo
+enddo
+
+
+end subroutine initvrtx
+!===================================!
 
 program main
 use hyzer; implicit none
 call lattice
 call pvect0
 call vxweight
+call initvrtx
 
 end program main

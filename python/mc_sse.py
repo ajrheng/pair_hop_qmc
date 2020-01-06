@@ -14,7 +14,7 @@ ntau = 100
 wgt = np.zeros(16,dtype=np.float64)
 awgt = np.zeros(16,dtype=np.float64)
 dwgt =np.zeros(16,dtype=np.float64)
-vx_num_from_int = np.zeros(tot_vx,dtype=np.int64) #ivx
+vx_num_from_int = np.zeros(tot_vx+1,dtype=np.int64) #ivx, +1 so index tot_vex is not illegal
 vx_num_from_int[:] = -1 #-1 to indicate it is an invalid vertex
 int_from_vx_num = np.zeros(num_vx,dtype=np.int64) #vxi
 op = np.zeros((7,16),dtype=np.int64)
@@ -22,7 +22,7 @@ oper_from_vx_num = np.zeros(num_vx,dtype=np.int64) #vxoper
 vx_num_aft_op = np.zeros((7,16),dtype=np.int64) #vxcode
 vx_leg = np.zeros((8,num_vx),dtype=np.int64) 
 vx_new = np.zeros((8,8,num_vx),dtype=np.int64)
-vx_prob = np.zeros((8,8,num_vx),dtype=np.int64)
+vx_prob = np.zeros((8,8,num_vx),dtype=np.float64)
 ctra = np.zeros((7,2,2,2,2),dtype=np.int64)
 
 
@@ -113,7 +113,7 @@ vx_count = -1 #you want the first vertex to be 0 indexed.
 #strict array indexing. so no array out of bounds error for the last index.
 
 for iq in range(16):
-    for i in range(3):
+    for i in range(4):
         ns[i] = iq2ns[i,iq]
         ns[i+4] = ns[i]
     
@@ -237,7 +237,8 @@ for iq in range(16):
 #====================================================
 
 #======================initvrtx=====================
-for i in range(num_vx):
+
+for i in range(num_vx): #in fortran it loops from 1-nvx inclusive, here its 0 - nvx-1
     ns[:] = 0
     vx_int1 = int_from_vx_num[i]
     for j in range(8):
@@ -265,6 +266,7 @@ for i in range(num_vx):
                 
                 elif oper == 1 or oper == 2 or oper ==3 or oper == 4:
                     vx_prob[out_leg,in_leg,i] = t
+                    
                     if oper ==1 and (ns_temp1[1] > ns_temp1[0]):
                         ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = -1
                     elif oper ==1 and (ns_temp1[1] < ns_temp1[0]):
@@ -273,16 +275,17 @@ for i in range(num_vx):
                         ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = -1
                     elif oper==2 and (ns_temp1[2] < ns_temp1[1]):
                         ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = 1
-                    elif oper==3 and (ns_temp1[3] < ns_temp1[2]):
-                        ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = 1
                     elif oper==3 and (ns_temp1[3] > ns_temp1[2]):
+                        ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = 1
+                    elif oper==3 and (ns_temp1[3] < ns_temp1[2]):
                         ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = -1
-                    elif oper==4 and (ns_temp1[4] < ns_temp1[3]):
+                    elif oper==4 and (ns_temp1[3] > ns_temp1[0]):
                         ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = -1
                     else:
                         ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = 1
                 else:
                     vx_prob[out_leg,in_leg,i] = tp
+                    counter += 1
                     if oper == 5 and (ns_temp1[1] < ns_temp1[2]):
                         ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = -2
                     elif oper ==5 and (ns_temp1[1] > ns_temp1[2]) :
@@ -292,17 +295,18 @@ for i in range(num_vx):
                     else:
                         ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = -2
             ns_temp1 = np.copy(ns_temp2)
-                
+
+
+for i in range(num_vx):
+    for in_leg in range(8):
+        for out_leg in range(1,8):
+            vx_prob[out_leg,in_leg,i] = vx_prob[out_leg,in_leg,i]+ vx_prob[out_leg-1,in_leg,i]
+            
 
 for i in range(num_vx):
     for in_leg in range(8):
         for out_leg in range(8):
-            vx_prob[out_leg,in_leg,i] = vx_prob[out_leg,in_leg,i]+ [out_leg-1,in_leg,i]
-
-for i in range(num_vx):
-    for in_leg in range(8):
-        for out_leg in range(8):
-            vx_prob[out_leg,in_leg,i] = vx_prob[out_leg,in_leg,i]/[7,in_leg,i]
+            vx_prob[out_leg,in_leg,i] = vx_prob[out_leg,in_leg,i]/vx_prob[7,in_leg,i]
             if vx_prob[out_leg,in_leg,i] < 1e-6:
                 vx_prob[out_leg,in_leg,i] = -1
 
