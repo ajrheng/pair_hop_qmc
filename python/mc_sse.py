@@ -285,7 +285,6 @@ for i in range(num_vx): #in fortran it loops from 1-nvx inclusive, here its 0 - 
                         ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = 1
                 else:
                     vx_prob[out_leg,in_leg,i] = tp
-                    counter += 1
                     if oper == 5 and (ns_temp1[1] < ns_temp1[2]):
                         ctra[oper,ns_temp1[0],ns_temp1[1],ns_temp1[2],ns_temp1[3]] = -2
                     elif oper ==5 and (ns_temp1[1] > ns_temp1[2]) :
