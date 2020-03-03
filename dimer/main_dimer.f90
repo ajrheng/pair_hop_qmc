@@ -1,7 +1,7 @@
 !SSE QMC for effective Shastry-Sutherland lattice in dimer basis
 !see Wessel et al. 10.1103/PhysRevB.98.174432 for details.
 
-!Label local sites with 0 as singlet, 1 as tm1, 2 as t0, 3 as tp1
+!Label local sites with 0 as singlet, 1 as tm (triplet with sz=-1), 2 as t0 (triplet with sz=0), 3 as tp (triplet with sz=+1)
 
 !Bond number to bond mapping:
 ! 0: 0-0, 4: 0-1, 8: 0-2, 12: 0-3
@@ -16,7 +16,7 @@ save
 integer, parameter :: nx=8, ny=8, nn=nx*ny, nb=2*nn, nn2=nn*nn
 real(8), parameter :: z=4.d0 ! 2*nb/nn
 
-integer,parameter :: max_bond_num = 4**2 - 1, max_vx_num=4**4 - 1, op_num = 15 - 1
+integer,parameter :: max_bond_num = 4**2 - 1, max_vx_num=4**4 - 1, op_num = 12 - 1
 
 integer,parameter :: ntau=100
 
@@ -38,6 +38,12 @@ real(8) :: vxprb(0:3,0:3,max_vx_num)
 
 integer, allocatable :: gstring(:)
 integer, allocatable :: vert(:),link(:)
+
+!wgt arrays tells you the eigenvalues of a local state after the operators acts on it. helps in calculating weights. for eg. tdp == T_d^+ operator
+!act arrays give you the value of the resulting state after action of an operator. for eg. tdp(2) = 3 because T_d^+ !0> gives you !+>.
+real(8) :: tdp_wgt(0:3), tdm_wgt(0:3), tdz_wgt(0:3), ddp_wgt(0:3), ddm_wgt(0:3), ddz_wgt(0:3)
+integer :: act_tdp(0:3), act_tdm(0:3), act_tdz(0:3), act_ddp(0:3), act_ddm(0:3), act_ddz(0:3)
+
 
 integer :: nl
 real(8) :: lopers,nloops

@@ -189,6 +189,52 @@ enddo
 end subroutine lattice
 !====================!
 
+!=====================!
+subroutine matrix_ele
+!=====================!
+use hyzer; implicit none
+
+integer :: i
+
+tdp_wgt(:) = 0.d0, tdm_wgt(:) = 0.d0, tdz_wgt(:) = 0.d0, ddp_wgt(:) = 0.d0, ddm_wgt(:) = 0.d0, ddz_wgt(:) = 0.d0
+act_tdp(:) = -1, act_tdm(:) = -1, act_tdz(:) = -1, act_ddp(:) = -1, act_ddm(:) = -1, act_ddz(:) = -1
+
+!handle the weight of the action of each operator on a local state
+ddz_wgt(0) = 1.d0
+ddp_wgt(0) = -SQRT(2)
+ddm_wgt(0) = SQRT(2)
+
+tdz_wgt(1) = -1.d0
+tdp_wgt(1) = SQRT(2)
+ddp_wgt(1) = SQRT(2)
+
+tdp_wgt(2) = SQRT(2)
+tdm_wgt(2) = SQRT(2)
+ddz_wgt(2) = 1.d0
+
+tdz_wgt(3) = 1.d0
+tdm_wgt(3) = SQRT(2)
+ddm_wgt(3) = -SQRT(2)
+
+!now handle the state resulting from the action of operator on state
+act_ddz(0) = 2
+act_ddp(0) = 3
+at_ddm(0) = 1
+
+act_tdz(1) = 1
+act_tdp(1) = 2
+act_ddp(1) = 0
+
+act_tdp(2) = 3
+act_tdm(2) = 1
+act_ddz(2) = 0
+
+act_tdz(3) = 1
+act_tdm(3) = 2
+act_ddm(3) = 0
+
+end subroutine matrix_ele
+!=====================!
 
 !====================!
 subroutine pvect0
@@ -196,25 +242,22 @@ subroutine pvect0
 use hyzer; implicit none
 
 integer :: iq,iiq,s1,s2
+real(8) :: weight_val
 
 amax=0.d0; wgt(:)=0.d0; awgt(:)=0.d0; dwgt(:)=0.d0
 
-!Manually code the weight of bonds because i cant figure out a way to automate this
-wgt(0) = 
-wgt(1) =
+do iq=0,max_bond_num
+    iiq=iq
+    s1=mod(iiq,4); iiq=iiq/4
+    s2=mod(iiq,4); iiq=iiq/4
+    weight_val = 0.25*j*( tdp_wgt(s1)*tdm_wgt(s2) + tdm_wgt(s1)*tdp_wgt(s2) ) + 0.5*j*tdz_wgt(s1)*tdz_wgt(s2)
+    weight_val = weight_val - 0.25*j*( tdp_wgt(s1)*ddm_wgt(s2) + tdm_wgt(s1)*ddp_wgt(s2) ) - 0.5*j*tdz_wgt(s1)*ddz_wgt(s2)
+    wgt(iq)= weight_val
+    if (wgt(iq).gt.amax) amax=wgt(iq) !set a maximum weight
+enddo
 
-! do iq=0,max_bond_num
-!     iiq=iq
-!     s1=mod(iiq,4); iiq=iiq/4
-!     s2=mod(iiq,4); iiq=iiq/4
-!     wgt(iq)= vv*dble(s1*s2 + s2*s3 + s3*s4 + s4*s1) !weight of a bond configuration
-!     wgt(iq)= wgt(iq) + vv2*dble(s1*s3 + s2*s4) !diagonal repulsion term
-!     wgt(iq)= wgt(iq) - mu*dble(s1+s2+s3+s4)/z !chemical potential term
-!     if (wgt(iq).gt.amax) amax=wgt(iq) !set a maximum weight
-! enddo
-!the larger the wgt(iq), the more unfavourable it is, or the higher energy the configuration is
 amax=amax+1.d0
-do iq=0,15
+do iq=0,max_bond_num
     awgt(iq)=amax-wgt(iq)
     if (awgt(iq).gt.1.d-6) then
         dwgt(iq)=1.0/awgt(iq)
