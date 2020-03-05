@@ -242,7 +242,7 @@ subroutine pvect0
 use hyzer; implicit none
 
 integer :: iq,iiq,s1,s2
-real(8) :: weight_val
+real(8) :: diag_weight
 
 amax=0.d0; wgt(:)=0.d0; awgt(:)=0.d0; dwgt(:)=0.d0
 
@@ -250,9 +250,8 @@ do iq=0,max_bond_num
     iiq=iq
     s1=mod(iiq,4); iiq=iiq/4
     s2=mod(iiq,4); iiq=iiq/4
-    weight_val = 0.25*j*( tdp_wgt(s1)*tdm_wgt(s2) + tdm_wgt(s1)*tdp_wgt(s2) ) + 0.5*j*tdz_wgt(s1)*tdz_wgt(s2)
-    weight_val = weight_val - 0.25*j*( tdp_wgt(s1)*ddm_wgt(s2) + tdm_wgt(s1)*ddp_wgt(s2) ) - 0.5*j*tdz_wgt(s1)*ddz_wgt(s2)
-    wgt(iq)= weight_val
+    diag_weight = 0.5*j*tdz_wgt(s1)*tdz_wgt(s2) !only for the diagonal elemets which is Tdz Tdz
+    wgt(iq)= diag_weight
     if (wgt(iq).gt.amax) amax=wgt(iq) !set a maximum weight
 enddo
 
@@ -274,47 +273,55 @@ subroutine vxweight
 !==========================!
 use hyzer; implicit none
 
-integer :: i,j,k,m,iq,jq,iiv,nv
-integer :: ns(0:7),ns1(0:7)
+integer :: i,j,k,m,iq,iiv,nv,opnum
+integer :: ns(0:3),ns1(0:3)
 real(8) :: vvsum,musum
 
 ivx(:)=-1; vxleg(:,:)=-1
 nv=0
+opnum=0
+!=========================================!
+! diagonal vertices:    n2  n3
+!                       =======
+!                       n0  n1
+!represent Tdz*Tdz term
+!=========================================!
+do iq = 0, max_bond_num
+    ns(0:3) = 0
+    iiq=iq
+    do i=0,1
+        ns(i)=mod(iiq,4); iiq=iiq/4
+        ns(i+2) = ns(i)
+    enddo
 
-!=========================================!
-! diagonal vertices:    n3  n2   n1  n0
-!                       ===============
-!                       n3  n2   n1  n0
-!=========================================!
-do iq=0,15
-    !these are to keep track of the vertex with diagonal operators, i.e no change in the sites after action of operator
-    ns(0:7)=0
-    do i=0,3
-        if(btest(iq,i)) ns(i)=1 !returns true if the bit is 1 at position i, for the integer iq
-        ns(i+4)=ns(i) !eg. 3 = 2^0 + 2^1, so btest(3,0) and btest(3,1) are true, btest(3,2) etc. are false.
-    enddo
-    iiv=0
-    do k=0,7
-        iiv=iiv+ns(k)*(2**k) !converts the 8 site vertex to a unique integer iiv
-    enddo
-    nv=nv+1 !number the vertex from 1 onwards
-    ivx(iiv)=nv; vxi(nv)=iiv !ivx(iiv) takes a vertex integer and returns the vertex number, vxi(nv) is the reverse
-    jq=0
-    op(0,iq)=iq; vxoper(nv)=0 !op tells you when operator 0 (off-diagonal) acts on plaquette iq, result is iq
-    ! vxoper(nv) returns the operator type (0 = diagonal) for a vertex number nv
-    vxcode(0,iq)=nv !given an diagonal operator and the state of the plaquette sites before action of operator, what is the vertex number
-    do k=0,7
-        vxleg(k,nv)=ns(k) !given a vertex number nv, what is the k'th site's state
-    enddo
+    if (tdz_wgt(ns(0)) * tdz_wgt(ns(1)) /= 0.d0) then !if the diagonal element is non-zero
+        iiv = 0
+        do k=0,3
+            iiv = iiv + ns(k)*(4**k)
+        enddo
+        nv=nv+1
+        ivx(iiv) = nv; vxi(nv) = iiv
+        op(opnum,iq) = iq; vxoper(nv) = opnum  
+        vxcode(opnum,iq) = nv
+        do k = 0,3
+            vxleg(k,nv) = ns(k)
+        enddo
+    endif
+
 enddo
+
+opnum = opnum + 1
+
 !========================================!
-! single boson hopping vertices
+! Off diagonal vertices
+! this represents Td+ Td-
 !========================================!
-do iq=0,15
-    ns(0:7)=0
-    do i=0,3
-        if(btest(iq,i)) ns(i)=1
-        ns(i+4)=ns(i)
+do iq=0,max_bond_num
+    ns(0:3) = 0
+    iiq=iq
+    do i=0,1
+        ns(i)=mod(iiq,4); iiq=iiq/4
+        ns(i+2) = ns(i)
     enddo
 
     do i=0,3
