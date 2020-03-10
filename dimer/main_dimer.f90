@@ -20,7 +20,7 @@ integer,parameter :: max_bond_num = 4**2 - 1, max_vx_num=4**4 - 1, op_num = 12 -
 
 integer,parameter :: ntau=100
 
-real(8) :: j,beta
+real(8) :: j,j2,beta
 integer :: istep,mstep,nruns,equ
 
 integer :: xy(2,nn),xy1(0:nx-1,0:ny-1)

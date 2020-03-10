@@ -219,7 +219,7 @@ ddm_wgt(3) = -SQRT(2)
 !now handle the state resulting from the action of operator on state
 act_ddz(0) = 2
 act_ddp(0) = 3
-at_ddm(0) = 1
+act_ddm(0) = 1
 
 act_tdz(1) = 1
 act_tdp(1) = 2
@@ -250,16 +250,17 @@ do iq=0,max_bond_num
     iiq=iq
     s1=mod(iiq,4); iiq=iiq/4
     s2=mod(iiq,4); iiq=iiq/4
-    diag_weight = 0.5*j*tdz_wgt(s1)*tdz_wgt(s2) !only for the diagonal elemets which is Tdz Tdz
+    diag_weight = 0.5*(j+j2)*tdz_wgt(s1)*tdz_wgt(s2) !only for the diagonal elemets which is Tdz Tdz
     wgt(iq)= diag_weight
-    if (wgt(iq).gt.amax) amax=wgt(iq) !set a maximum weight
+    !if (wgt(iq).gt.amax) amax=wgt(iq) !set a maximum weight
 enddo
 
-amax=amax+1.d0
+!amax=amax+1.d0 !shift by 1/2(j+j2) to make certain diagonal vertices zero???
+wgt(:) = wgt(:) + 0.5 * (j+j2)
 do iq=0,max_bond_num
-    awgt(iq)=amax-wgt(iq)
-    if (awgt(iq).gt.1.d-6) then
-        dwgt(iq)=1.0/awgt(iq)
+    !awgt(iq)=amax-wgt(iq)
+    if (wgt(iq).gt.1.d-6) then
+        dwgt(iq)=1.0/wgt(iq)
     else
         dwgt(iq)=1.d6
     endif
@@ -287,14 +288,14 @@ opnum=0
 !represent Tdz*Tdz term
 !=========================================!
 do iq = 0, max_bond_num
-    ns(0:3) = 0
-    iiq=iq
-    do i=0,1
-        ns(i)=mod(iiq,4); iiq=iiq/4
-        ns(i+2) = ns(i)
-    enddo
+    if (wgt(iq) /= 0.d0) then
+        ns(0:3) = 0
+        iiq=iq
+        do i=0,1
+            ns(i)=mod(iiq,4); iiq=iiq/4
+            ns(i+2) = ns(i)
+        enddo
 
-    if (tdz_wgt(ns(0)) * tdz_wgt(ns(1)) /= 0.d0) then !if the diagonal element is non-zero
         iiv = 0
         do k=0,3
             iiv = iiv + ns(k)*(4**k)
@@ -307,7 +308,6 @@ do iq = 0, max_bond_num
             vxleg(k,nv) = ns(k)
         enddo
     endif
-
 enddo
 
 opnum = opnum + 1
@@ -321,118 +321,177 @@ do iq=0,max_bond_num
     iiq=iq
     do i=0,1
         ns(i)=mod(iiq,4); iiq=iiq/4
-        ns(i+2) = ns(i)
     enddo
 
-    do i=0,3
-        ns1(:)=ns(:)
-        j=mod(i+1,4) !find the neighboring site
-        if(ns1(i)/= ns1(j)) then !if the next site is not the same as the previous site, single hop to that site
-            ns1(i+4)=1-ns(i) !flip old site.
-            ns1(j+4)=1-ns(j) !flip new site, so now boson hopped from old site to new site
-            iiv=0
-            do k=0,7
-                iiv=iiv+ns1(k)*(2**k) !this encodes it as a binary 2 bit number. 2^0 + 2^1 + ...
-            enddo
-            nv=nv+1
-            ivx(iiv)=nv; vxi(nv)=iiv
-            jq=0
-            do k=0,3
-                jq=jq+ns1(k+4)*(2**k)
-            enddo
-            op(i+1,iq)=jq; vxoper(nv)=i+1 !act operator number i+1 on initial plaquette config iq gives jq
-            vxcode(i+1,iq)=nv !given operator number (i+1) and the initial state iq, you know what vertex number it is referring to
-            do k=0,7
-                vxleg(k,nv)=ns1(k)
-            enddo
+    if ( (act_tdp(ns(0)) /= -1 .and. act_tdm(ns(1)) /= -1) .or. &
+    (act_tdm(ns(0)) /= -1 .and. act_tdp(ns(1)) /= -1) ) then
+        !meaning either TpTm or TmTp causes a valid vertex on this state
+        if (act_tdp(ns(0)) /= -1 .and. act_tdm(ns(1)) /= -1) then !if it is TpTm
+            ns(2) = act_tdp(ns(0))
+            ns(3) = act_tdm(ns(1))
+        else !if it is TmTp
+            ns(2) = act_tdm(ns(0))
+            ns(3) = act_tdp(ns(1))
         endif
-    enddo
+        iiv = 0
+        do k=0,3
+            iiv = iiv + ns(k)*(4**k)
+        enddo
+        nv=nv+1
+        ivx(iiv) = nv; vxi(nv) = iiv
+        op(opnum,iq) = iq; vxoper(nv) = opnum  
+        vxcode(opnum,iq) = nv
+        do k = 0,3
+            vxleg(k,nv) = ns(k)
+        enddo
+    endif
+
+    ! do i=0,3
+    !     ns1(:)=ns(:)
+    !     j=mod(i+1,4) !find the neighboring site
+    !     if(ns1(i)/= ns1(j)) then !if the next site is not the same as the previous site, single hop to that site
+    !         ns1(i+4)=1-ns(i) !flip old site.
+    !         ns1(j+4)=1-ns(j) !flip new site, so now boson hopped from old site to new site
+    !         iiv=0
+    !         do k=0,7
+    !             iiv=iiv+ns1(k)*(2**k) !this encodes it as a binary 2 bit number. 2^0 + 2^1 + ...
+    !         enddo
+    !         nv=nv+1
+    !         ivx(iiv)=nv; vxi(nv)=iiv
+    !         jq=0
+    !         do k=0,3
+    !             jq=jq+ns1(k+4)*(2**k)
+    !         enddo
+    !         op(i+1,iq)=jq; vxoper(nv)=i+1 !act operator number i+1 on initial plaquette config iq gives jq
+    !         vxcode(i+1,iq)=nv !given operator number (i+1) and the initial state iq, you know what vertex number it is referring to
+    !         do k=0,7
+    !             vxleg(k,nv)=ns1(k)
+    !         enddo
+    !     endif
+    ! enddo
+
 enddo
+
+opnum = opnum + 1
 !======================================!
-! pair hopping vertices
+! Off diagonal vertices
+! this represents TzDz, TpDm and TmDp
 !======================================!
-!repeat the above analysis for pair hopping vertices. idea is the same.
-do iq=0,15
-    ns(0:7)=0
-    do i=0,3
-        if(btest(iq,i)) ns(i)=1
-        ns(i+4)=ns(i)
+
+do iq=0,max_bond_num
+    ns(0:3) = 0
+    iiq=iq
+    do i=0,1
+        ns(i)=mod(iiq,4); iiq=iiq/4
     enddo
-    if((ns(0).eq.0).and.(ns(1).eq.0) &
-        .and.(ns(2).eq.1).and.(ns(3).eq.1)) then
-        ns(4)=1; ns(5)=1; ns(6)=0; ns(7)=0
-        iiv=0
-        do k=0,7
-            iiv=iiv+ns(k)*(2**k)
+
+    if ( (act_tdz(ns(0)) /= -1 .and. act_ddz(ns(1)) /= -1) .or. & 
+    (act_tdp(ns(0)) /= -1 .and. act_ddm(ns(1)) /= -1) .or. &
+    (act_tdm(ns(0)) /= -1 .and. act_ddp(ns(1)) /= -1)) then
+
+        if ( (act_tdz(ns(0)) /= -1 .and. act_ddz(ns(1)) /= -1)) then !if it is TdzDdz
+            ns(2) = act_tdz(ns(0))
+            ns(3) = act_ddz(ns(1))
+        elseif (act_tdp(ns(0)) /= -1 .and. act_ddm(ns(1)) /= -1) then!if it is TpDm
+            ns(2) = act_tdp(ns(0))
+            ns(3) = act_ddm(ns(1))
+        else !if TmDp
+            ns(2) = act_tdm(ns(0))
+            ns(3) = act_ddp(ns(1))
+        endif
+        iiv = 0
+        do k=0,3
+            iiv = iiv + ns(k)*(4**k)
         enddo
         nv=nv+1
-        ivx(iiv)=nv; vxi(nv)=iiv
-        jq=0
-        do k=0,3
-            jq=jq+ns(k+4)*(2**k)
-        enddo
-        op(5,iq)=jq; vxoper(nv)=5
-        vxcode(5,iq)=nv
-        do k=0,7
-            vxleg(k,nv)=ns(k)
-        enddo
-     elseif  ((ns(0).eq.1).and.(ns(1).eq.1) &
-        .and.(ns(2).eq.0).and.(ns(3).eq.0))then
-        ns(4)=0; ns(5)=0; ns(6)=1; ns(7)=1
-        iiv=0
-        do k=0,7
-            iiv=iiv+ns(k)*(2**k)
-        enddo
-        nv=nv+1
-        ivx(iiv)=nv; vxi(nv)=iiv
-        jq=0
-        do k=0,3
-            jq=jq+ns(k+4)*(2**k)
-        enddo
-        op(5,iq)=jq; vxoper(nv)=5
-        vxcode(5,iq)=nv
-        do k=0,7
-            vxleg(k,nv)=ns(k)
-        enddo
-     elseif  ((ns(0).eq.1).and.(ns(1).eq.0) &
-        .and.(ns(2).eq.0).and.(ns(3).eq.1))then
-        ns(4)=0; ns(5)=1; ns(6)=1; ns(7)=0
-        iiv=0
-        do k=0,7
-            iiv=iiv+ns(k)*(2**k)
-        enddo
-        nv=nv+1
-        ivx(iiv)=nv; vxi(nv)=iiv
-        jq=0
-        do k=0,3
-            jq=jq+ns(k+4)*(2**k)
-        enddo
-        op(6,iq)=jq; vxoper(nv)=6
-        vxcode(6,iq)=nv
-        do k=0,7
-            vxleg(k,nv)=ns(k)
-        enddo
-     elseif  ((ns(0).eq.0).and.(ns(1).eq.1) &
-        .and.(ns(2).eq.1).and.(ns(3).eq.0))then
-        ns(4)=1; ns(5)=0; ns(6)=0; ns(7)=1
-        iiv=0
-        do k=0,7
-            iiv=iiv+ns(k)*(2**k)
-        enddo
-        nv=nv+1
-        ivx(iiv)=nv; vxi(nv)=iiv
-        jq=0
-        do k=0,3
-            jq=jq+ns(k+4)*(2**k)
-        enddo
-        op(6,iq)=jq; vxoper(nv)=6
-        vxcode(6,iq)=nv
-        do k=0,7
-            vxleg(k,nv)=ns(k)
+        ivx(iiv) = nv; vxi(nv) = iiv
+        op(opnum,iq) = iq; vxoper(nv) = opnum  
+        vxcode(opnum,iq) = nv
+        do k = 0,3
+            vxleg(k,nv) = ns(k)
         enddo
     endif
 enddo
-
+! do iq=0,15
+!     ns(0:7)=0
+!     do i=0,3
+!         if(btest(iq,i)) ns(i)=1
+!         ns(i+4)=ns(i)
+!     enddo
+!     if((ns(0).eq.0).and.(ns(1).eq.0) &
+!         .and.(ns(2).eq.1).and.(ns(3).eq.1)) then
+!         ns(4)=1; ns(5)=1; ns(6)=0; ns(7)=0
+!         iiv=0
+!         do k=0,7
+!             iiv=iiv+ns(k)*(2**k)
+!         enddo
+!         nv=nv+1
+!         ivx(iiv)=nv; vxi(nv)=iiv
+!         jq=0
+!         do k=0,3
+!             jq=jq+ns(k+4)*(2**k)
+!         enddo
+!         op(5,iq)=jq; vxoper(nv)=5
+!         vxcode(5,iq)=nv
+!         do k=0,7
+!             vxleg(k,nv)=ns(k)
+!         enddo
+!      elseif  ((ns(0).eq.1).and.(ns(1).eq.1) &
+!         .and.(ns(2).eq.0).and.(ns(3).eq.0))then
+!         ns(4)=0; ns(5)=0; ns(6)=1; ns(7)=1
+!         iiv=0
+!         do k=0,7
+!             iiv=iiv+ns(k)*(2**k)
+!         enddo
+!         nv=nv+1
+!         ivx(iiv)=nv; vxi(nv)=iiv
+!         jq=0
+!         do k=0,3
+!             jq=jq+ns(k+4)*(2**k)
+!         enddo
+!         op(5,iq)=jq; vxoper(nv)=5
+!         vxcode(5,iq)=nv
+!         do k=0,7
+!             vxleg(k,nv)=ns(k)
+!         enddo
+!      elseif  ((ns(0).eq.1).and.(ns(1).eq.0) &
+!         .and.(ns(2).eq.0).and.(ns(3).eq.1))then
+!         ns(4)=0; ns(5)=1; ns(6)=1; ns(7)=0
+!         iiv=0
+!         do k=0,7
+!             iiv=iiv+ns(k)*(2**k)
+!         enddo
+!         nv=nv+1
+!         ivx(iiv)=nv; vxi(nv)=iiv
+!         jq=0
+!         do k=0,3
+!             jq=jq+ns(k+4)*(2**k)
+!         enddo
+!         op(6,iq)=jq; vxoper(nv)=6
+!         vxcode(6,iq)=nv
+!         do k=0,7
+!             vxleg(k,nv)=ns(k)
+!         enddo
+!      elseif  ((ns(0).eq.0).and.(ns(1).eq.1) &
+!         .and.(ns(2).eq.1).and.(ns(3).eq.0))then
+!         ns(4)=1; ns(5)=0; ns(6)=0; ns(7)=1
+!         iiv=0
+!         do k=0,7
+!             iiv=iiv+ns(k)*(2**k)
+!         enddo
+!         nv=nv+1
+!         ivx(iiv)=nv; vxi(nv)=iiv
+!         jq=0
+!         do k=0,3
+!             jq=jq+ns(k+4)*(2**k)
+!         enddo
+!         op(6,iq)=jq; vxoper(nv)=6
+!         vxcode(6,iq)=nv
+!         do k=0,7
+!             vxleg(k,nv)=ns(k)
+!         enddo
+!     endif
+! enddo
 end subroutine vxweight
 !==================================!
 
