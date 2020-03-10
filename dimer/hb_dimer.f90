@@ -171,7 +171,7 @@ do ix=0,ny-1
     do iy=0,nx-1
         q = q+1
         ix1 = ix; iy1 = iy
-        ix2 = ix1 iy2 = mod(iy1+1,ny)
+        ix2 = ix1; iy2 = mod(iy1+1,ny)
         bond(0,q)=xy1(ix1,iy1) 
         bond(1,q)=xy1(ix2,iy2)
     enddo
@@ -196,25 +196,26 @@ use hyzer; implicit none
 
 integer :: i
 
-tdp_wgt(:) = 0.d0, tdm_wgt(:) = 0.d0, tdz_wgt(:) = 0.d0, ddp_wgt(:) = 0.d0, ddm_wgt(:) = 0.d0, ddz_wgt(:) = 0.d0
-act_tdp(:) = -1, act_tdm(:) = -1, act_tdz(:) = -1, act_ddp(:) = -1, act_ddm(:) = -1, act_ddz(:) = -1
+tdp_wgt(:) = 0.d0; tdm_wgt(:) = 0.d0; tdz_wgt(:) = 0.d0; ddp_wgt(:) = 0.d0; ddm_wgt(:) = 0.d0; ddz_wgt(:) = 0.d0
+act_tdp(:) = -1; act_tdm(:) = -1; act_tdz(:) = -1; act_ddp(:) = -1; act_ddm(:) = -1; act_ddz(:) = -1
 
 !handle the weight of the action of each operator on a local state
+!switch all off-diagonals to positive, but keep the negative signs of the diagonals
 ddz_wgt(0) = 1.d0
-ddp_wgt(0) = -SQRT(2)
-ddm_wgt(0) = SQRT(2)
+ddp_wgt(0) = SQRT(2.d0)
+ddm_wgt(0) = SQRT(2.d0)
 
-tdz_wgt(1) = -1.d0
-tdp_wgt(1) = SQRT(2)
-ddp_wgt(1) = SQRT(2)
+tdz_wgt(1) = -1.d0 
+tdp_wgt(1) = SQRT(2.d0)
+ddp_wgt(1) = SQRT(2.d0)
 
-tdp_wgt(2) = SQRT(2)
-tdm_wgt(2) = SQRT(2)
+tdp_wgt(2) = SQRT(2.d0)
+tdm_wgt(2) = SQRT(2.d0)
 ddz_wgt(2) = 1.d0
 
 tdz_wgt(3) = 1.d0
-tdm_wgt(3) = SQRT(2)
-ddm_wgt(3) = -SQRT(2)
+tdm_wgt(3) = SQRT(2.d0)
+ddm_wgt(3) = SQRT(2.d0)
 
 !now handle the state resulting from the action of operator on state
 act_ddz(0) = 2
@@ -274,19 +275,24 @@ subroutine vxweight
 !==========================!
 use hyzer; implicit none
 
-integer :: i,j,k,m,iq,iiv,nv,opnum
-integer :: ns(0:3),ns1(0:3)
-real(8) :: vvsum,musum
+integer :: i,k,m,iq,iiv,nv,opnum,iiq,jq
+integer :: ns(0:3)
 
 ivx(:)=-1; vxleg(:,:)=-1
 nv=0
-opnum=0
+
+!=========================================!
+! for opnum, 0 = TzTz (diagonal), 1 = TpTm, 2 = TmTp
+! 3 = TzDz, 4 = TpDm, 5 = TmDp
+!=========================================!
+
 !=========================================!
 ! diagonal vertices:    n2  n3
 !                       =======
 !                       n0  n1
 !represent Tdz*Tdz term
 !=========================================!
+opnum = 0
 do iq = 0, max_bond_num
     if (wgt(iq) /= 0.d0) then
         ns(0:3) = 0
@@ -295,14 +301,13 @@ do iq = 0, max_bond_num
             ns(i)=mod(iiq,4); iiq=iiq/4
             ns(i+2) = ns(i)
         enddo
-
         iiv = 0
         do k=0,3
             iiv = iiv + ns(k)*(4**k)
         enddo
         nv=nv+1
         ivx(iiv) = nv; vxi(nv) = iiv
-        op(opnum,iq) = iq; vxoper(nv) = opnum  
+        op(0,iq) = iq; vxoper(nv) = opnum  
         vxcode(opnum,iq) = nv
         do k = 0,3
             vxleg(k,nv) = ns(k)
@@ -310,7 +315,6 @@ do iq = 0, max_bond_num
     endif
 enddo
 
-opnum = opnum + 1
 
 !========================================!
 ! Off diagonal vertices
@@ -323,56 +327,51 @@ do iq=0,max_bond_num
         ns(i)=mod(iiq,4); iiq=iiq/4
     enddo
 
-    if ( (act_tdp(ns(0)) /= -1 .and. act_tdm(ns(1)) /= -1) .or. &
-    (act_tdm(ns(0)) /= -1 .and. act_tdp(ns(1)) /= -1) ) then
-        !meaning either TpTm or TmTp causes a valid vertex on this state
-        if (act_tdp(ns(0)) /= -1 .and. act_tdm(ns(1)) /= -1) then !if it is TpTm
-            ns(2) = act_tdp(ns(0))
-            ns(3) = act_tdm(ns(1))
-        else !if it is TmTp
-            ns(2) = act_tdm(ns(0))
-            ns(3) = act_tdp(ns(1))
-        endif
+    if (act_tdp(ns(0)) /= -1 .and. act_tdm(ns(1)) /= -1) then
+        !meaning TpTm causes a valid vertex on this state
+        opnum = 1
+        ns(2) = act_tdp(ns(0))
+        ns(3) = act_tdm(ns(1))
         iiv = 0
         do k=0,3
             iiv = iiv + ns(k)*(4**k)
         enddo
         nv=nv+1
         ivx(iiv) = nv; vxi(nv) = iiv
-        op(opnum,iq) = iq; vxoper(nv) = opnum  
+        jq=0
+        do k=0,1
+            jq=jq+ns(k+2)*(4**k) !encode the resulting vertex into an integer jq
+        enddo
+        op(opnum,iq) = jq; vxoper(nv) = opnum  
         vxcode(opnum,iq) = nv
         do k = 0,3
             vxleg(k,nv) = ns(k)
         enddo
     endif
 
-    ! do i=0,3
-    !     ns1(:)=ns(:)
-    !     j=mod(i+1,4) !find the neighboring site
-    !     if(ns1(i)/= ns1(j)) then !if the next site is not the same as the previous site, single hop to that site
-    !         ns1(i+4)=1-ns(i) !flip old site.
-    !         ns1(j+4)=1-ns(j) !flip new site, so now boson hopped from old site to new site
-    !         iiv=0
-    !         do k=0,7
-    !             iiv=iiv+ns1(k)*(2**k) !this encodes it as a binary 2 bit number. 2^0 + 2^1 + ...
-    !         enddo
-    !         nv=nv+1
-    !         ivx(iiv)=nv; vxi(nv)=iiv
-    !         jq=0
-    !         do k=0,3
-    !             jq=jq+ns1(k+4)*(2**k)
-    !         enddo
-    !         op(i+1,iq)=jq; vxoper(nv)=i+1 !act operator number i+1 on initial plaquette config iq gives jq
-    !         vxcode(i+1,iq)=nv !given operator number (i+1) and the initial state iq, you know what vertex number it is referring to
-    !         do k=0,7
-    !             vxleg(k,nv)=ns1(k)
-    !         enddo
-    !     endif
-    ! enddo
-
+    if (act_tdm(ns(0)) /= -1 .and. act_tdp(ns(1)) /= -1) then !if it is TmTp
+    !two if statements in case one vertex number allows both TpTm and TmTp to act on it.
+        opnum = 2
+        ns(2) = act_tdm(ns(0))
+        ns(3) = act_tdp(ns(1))
+        iiv = 0
+        do k=0,3
+            iiv = iiv + ns(k)*(4**k)
+        enddo
+        nv=nv+1
+        ivx(iiv) = nv; vxi(nv) = iiv
+        jq=0
+        do k=0,1
+            jq=jq+ns(k+2)*(4**k)
+        enddo
+        op(opnum,iq) = jq; vxoper(nv) = opnum  
+        vxcode(opnum,iq) = nv
+        do k = 0,3
+            vxleg(k,nv) = ns(k)
+        enddo
+    endif
 enddo
 
-opnum = opnum + 1
 !======================================!
 ! Off diagonal vertices
 ! this represents TzDz, TpDm and TmDp
@@ -385,113 +384,70 @@ do iq=0,max_bond_num
         ns(i)=mod(iiq,4); iiq=iiq/4
     enddo
 
-    if ( (act_tdz(ns(0)) /= -1 .and. act_ddz(ns(1)) /= -1) .or. & 
-    (act_tdp(ns(0)) /= -1 .and. act_ddm(ns(1)) /= -1) .or. &
-    (act_tdm(ns(0)) /= -1 .and. act_ddp(ns(1)) /= -1)) then
-
-        if ( (act_tdz(ns(0)) /= -1 .and. act_ddz(ns(1)) /= -1)) then !if it is TdzDdz
-            ns(2) = act_tdz(ns(0))
-            ns(3) = act_ddz(ns(1))
-        elseif (act_tdp(ns(0)) /= -1 .and. act_ddm(ns(1)) /= -1) then!if it is TpDm
-            ns(2) = act_tdp(ns(0))
-            ns(3) = act_ddm(ns(1))
-        else !if TmDp
-            ns(2) = act_tdm(ns(0))
-            ns(3) = act_ddp(ns(1))
-        endif
+    if ( (act_tdz(ns(0)) /= -1 .and. act_ddz(ns(1)) /= -1)) then
+        opnum = 3
+        ns(2) = act_tdz(ns(0))
+        ns(3) = act_ddz(ns(1))
         iiv = 0
         do k=0,3
             iiv = iiv + ns(k)*(4**k)
         enddo
         nv=nv+1
         ivx(iiv) = nv; vxi(nv) = iiv
-        op(opnum,iq) = iq; vxoper(nv) = opnum  
+        jq=0
+        do k=0,1
+            jq=jq+ns(k+2)*(4**k) !encode the resulting vertex into an integer jq
+        enddo
+        op(opnum,iq) = jq; vxoper(nv) = opnum  
+        vxcode(opnum,iq) = nv
+        do k = 0,3
+            vxleg(k,nv) = ns(k)
+        enddo
+    endif
+
+    if (act_tdp(ns(0)) /= -1 .and. act_ddm(ns(1)) /= -1) then
+        opnum = 4
+        ns(2) = act_tdp(ns(0))
+        ns(3) = act_ddm(ns(1))
+        iiv = 0
+        do k=0,3
+            iiv = iiv + ns(k)*(4**k)
+        enddo
+        nv=nv+1
+        ivx(iiv) = nv; vxi(nv) = iiv
+        jq=0
+        do k=0,1
+            jq=jq+ns(k+2)*(4**k) !encode the resulting vertex into an integer jq
+        enddo
+        op(opnum,iq) = jq; vxoper(nv) = opnum  
+        vxcode(opnum,iq) = nv
+        do k = 0,3
+            vxleg(k,nv) = ns(k)
+        enddo
+    endif
+
+    if (act_tdm(ns(0)) /= -1 .and. act_ddp(ns(1)) /= -1) then
+        opnum = 5
+        ns(2) = act_tdm(ns(0))
+        ns(3) = act_ddp(ns(1))
+        iiv = 0
+        do k=0,3
+            iiv = iiv + ns(k)*(4**k)
+        enddo
+        nv=nv+1
+        ivx(iiv) = nv; vxi(nv) = iiv
+        jq=0
+        do k=0,1
+            jq=jq+ns(k+2)*(4**k) !encode the resulting vertex into an integer jq
+        enddo
+        op(opnum,iq) = jq; vxoper(nv) = opnum  
         vxcode(opnum,iq) = nv
         do k = 0,3
             vxleg(k,nv) = ns(k)
         enddo
     endif
 enddo
-! do iq=0,15
-!     ns(0:7)=0
-!     do i=0,3
-!         if(btest(iq,i)) ns(i)=1
-!         ns(i+4)=ns(i)
-!     enddo
-!     if((ns(0).eq.0).and.(ns(1).eq.0) &
-!         .and.(ns(2).eq.1).and.(ns(3).eq.1)) then
-!         ns(4)=1; ns(5)=1; ns(6)=0; ns(7)=0
-!         iiv=0
-!         do k=0,7
-!             iiv=iiv+ns(k)*(2**k)
-!         enddo
-!         nv=nv+1
-!         ivx(iiv)=nv; vxi(nv)=iiv
-!         jq=0
-!         do k=0,3
-!             jq=jq+ns(k+4)*(2**k)
-!         enddo
-!         op(5,iq)=jq; vxoper(nv)=5
-!         vxcode(5,iq)=nv
-!         do k=0,7
-!             vxleg(k,nv)=ns(k)
-!         enddo
-!      elseif  ((ns(0).eq.1).and.(ns(1).eq.1) &
-!         .and.(ns(2).eq.0).and.(ns(3).eq.0))then
-!         ns(4)=0; ns(5)=0; ns(6)=1; ns(7)=1
-!         iiv=0
-!         do k=0,7
-!             iiv=iiv+ns(k)*(2**k)
-!         enddo
-!         nv=nv+1
-!         ivx(iiv)=nv; vxi(nv)=iiv
-!         jq=0
-!         do k=0,3
-!             jq=jq+ns(k+4)*(2**k)
-!         enddo
-!         op(5,iq)=jq; vxoper(nv)=5
-!         vxcode(5,iq)=nv
-!         do k=0,7
-!             vxleg(k,nv)=ns(k)
-!         enddo
-!      elseif  ((ns(0).eq.1).and.(ns(1).eq.0) &
-!         .and.(ns(2).eq.0).and.(ns(3).eq.1))then
-!         ns(4)=0; ns(5)=1; ns(6)=1; ns(7)=0
-!         iiv=0
-!         do k=0,7
-!             iiv=iiv+ns(k)*(2**k)
-!         enddo
-!         nv=nv+1
-!         ivx(iiv)=nv; vxi(nv)=iiv
-!         jq=0
-!         do k=0,3
-!             jq=jq+ns(k+4)*(2**k)
-!         enddo
-!         op(6,iq)=jq; vxoper(nv)=6
-!         vxcode(6,iq)=nv
-!         do k=0,7
-!             vxleg(k,nv)=ns(k)
-!         enddo
-!      elseif  ((ns(0).eq.0).and.(ns(1).eq.1) &
-!         .and.(ns(2).eq.1).and.(ns(3).eq.0))then
-!         ns(4)=1; ns(5)=0; ns(6)=0; ns(7)=1
-!         iiv=0
-!         do k=0,7
-!             iiv=iiv+ns(k)*(2**k)
-!         enddo
-!         nv=nv+1
-!         ivx(iiv)=nv; vxi(nv)=iiv
-!         jq=0
-!         do k=0,3
-!             jq=jq+ns(k+4)*(2**k)
-!         enddo
-!         op(6,iq)=jq; vxoper(nv)=6
-!         vxcode(6,iq)=nv
-!         do k=0,7
-!             vxleg(k,nv)=ns(k)
-!         enddo
-!     endif
-! enddo
+
 end subroutine vxweight
 !==================================!
 

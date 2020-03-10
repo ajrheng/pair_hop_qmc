@@ -16,7 +16,7 @@ save
 integer, parameter :: nx=8, ny=8, nn=nx*ny, nb=2*nn, nn2=nn*nn
 real(8), parameter :: z=4.d0 ! 2*nb/nn
 
-integer,parameter :: max_bond_num = 4**2 - 1, max_vx_num=4**4 - 1, op_num = 12 - 1
+integer,parameter :: max_bond_num = 4**2 - 1, max_vx_num=4**4 - 1, op_num = 5 !five types of opers, see vxweight
 
 integer,parameter :: ntau=100
 
