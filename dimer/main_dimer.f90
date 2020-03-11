@@ -25,16 +25,17 @@ integer :: istep,mstep,nruns,equ
 
 integer :: xy(2,nn),xy1(0:nx-1,0:ny-1)
 
-integer :: l,mloop,nh
+integer :: l,mloop,nh , nv !number of vertex
 integer :: st(nn)
 integer :: ns2iq(0:3,0:3),iq2ns(0:1,0:max_bond_num)
 integer :: bond(0:1,nb),btyp(nb),phase(nn)
 real(8) :: amax,wgt(0:max_bond_num),awgt(0:max_bond_num),dwgt(0:max_bond_num)
 
 integer :: vxoper(max_vx_num),vxcode(0:op_num,0:max_bond_num),vxleg(0:3,max_vx_num)
-integer :: vxnew(0:3,0:3,max_vx_num),op(0:op_num,0:max_bond_num) !6 allowed vertices for 2 site bonds, 16 total number of verties
-integer :: ivx(0:max_vx_num),vxi(max_vx_num)
-real(8) :: vxprb(0:3,0:3,max_vx_num)
+integer :: op(0:op_num,0:max_bond_num)
+integer :: vxnew(0:3,0:3,,0:3,max_vx_num) !vxnew(inleg, outleg, in_state_aft_flip, max-vx_num)
+integer :: ivx(0:max_vx_num),vxi(max_vx_num) 
+real(8) :: vxprb(0:3,0:3,0:3,max_vx_num) !vxprb(inleg, outleg, in_state_aft_flip ,max_vx_num)
 
 integer, allocatable :: gstring(:)
 integer, allocatable :: vert(:),link(:)

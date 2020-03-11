@@ -275,7 +275,7 @@ subroutine vxweight
 !==========================!
 use hyzer; implicit none
 
-integer :: i,k,m,iq,iiv,nv,opnum,iiq,jq
+integer :: i,k,m,iq,iiv,opnum,iiq,jq
 integer :: ns(0:3)
 
 ivx(:)=-1; vxleg(:,:)=-1
@@ -455,22 +455,51 @@ subroutine initvrtx
 !==============================!
 use hyzer; implicit none
 
-integer::ns(0:7),i,iiq,ic,oc,iiv,ns1(0:7),k,ns2(0:7),iq,o
+integer :: ns(0:3),i,iiq,ic,oc,iiv,ns1(0:3),k,ns2(0:3),iq,o,instate,outstate,vertex_num
 
-vxprb(:,:,:)=0 !vxprb stores the probability of accepting the change
-vxnew(:,:,:)=0
-do i=1,nvx
+vxprb(:,:,:,:)=0.d0 !vxprb stores the probability of accepting the change
+vxnew(:,:,:,:)=0
+do i=1,nv
     iiq=vxi(i) !retrieve the binary number representing the vertex
-    ns(0)=mod(iiq,2); iiq=iiq/2 !undo the binary number to retrieve the spins
-    ns(1)=mod(iiq,2); iiq=iiq/2
-    ns(2)=mod(iiq,2); iiq=iiq/2
-    ns(3)=mod(iiq,2); iiq=iiq/2
-    ns(4)=mod(iiq,2); iiq=iiq/2
-    ns(5)=mod(iiq,2); iiq=iiq/2
-    ns(6)=mod(iiq,2); iiq=iiq/2
-    ns(7)=mod(iiq,2); iiq=iiq/2
-    do ic=0,7
-        ns1(:)=ns(:)
+    do k = 0,3
+        ns(k)=mod(iiq,4); iiq=iiq/4 !undo the binary number to retrieve the spins
+    enddo
+    do ic=0,3
+        instate = ns(ic)
+        !do TpTm/TmTp worm probabilities first, so check action of T+ or T-
+        if (act_tdp(instate) /= -1) then
+            ns1(:)=ns(:) !copy a ns1 to flip in leg
+            ns1(ic) = act_tdp(instate)
+            do oc =0,3
+                ns2(:) = ns1(:) !copy a ns2 to flip out leg
+                outstate = ns2(oc)
+                if (act_tdp(outstate) /= -1) then
+                    ns2(oc) = act_tdp(outstate)
+                    iiv = 0
+                    do k = 0,3
+                        iiv = iiv + ns2(k)*(4**k)
+                    enddo
+                    if (ivx(iiv)/= -1) then ! if its not -1 then it is a valid vertex
+                        vertex_num = ivx(iiv)
+                        vxnew(ic,oc,ns1(ic),nv) = vertex_num
+                    endif
+                endif
+
+                if (act_tdm(outstate) /= -1) then
+                endif
+            enddo
+
+        endif
+        
+        if (act_tdm(ic) /= -1)then
+        endif
+
+
+
+
+
+
+
         ns1(ic)=1-ns1(ic) !flip in the in spin
         ns2(:)=ns1(:)
         do oc=0,7
