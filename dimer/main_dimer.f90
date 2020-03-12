@@ -35,7 +35,8 @@ integer :: vxoper(max_vx_num),vxcode(0:op_num,0:max_bond_num),vxleg(0:3,max_vx_n
 integer :: op(0:op_num,0:max_bond_num)
 integer :: vxnew(0:3,0:3,,0:3,max_vx_num) !vxnew(inleg, outleg, in_state_aft_flip, max-vx_num)
 integer :: ivx(0:max_vx_num),vxi(max_vx_num) 
-real(8) :: vxprb(0:3,0:3,0:3,max_vx_num) !vxprb(inleg, outleg, in_state_aft_flip ,max_vx_num)
+real(8) :: vxprb_t_worm(0:3,0:3,0:3,max_vx_num), vxprb_dz_worm(0:3,0:3,0:3,max_vx_num), vxprb_dpm_worm(0:3,0:3,0:3,max_vx_num) !vxprb(inleg, outleg, in_state_aft_flip ,max_vx_num)
+real(8) :: vx_matrix_ele(0:op_num,max_vx_num) !given the vertex_num, gives the value of the matrix ele
 
 integer, allocatable :: gstring(:)
 integer, allocatable :: vert(:),link(:)

@@ -39,6 +39,25 @@ real(8) :: lopers,nloops
 
 integer :: iir,jjr,kkr,nnr
 
+contains
+
+integer function get_vx_num(array)
+implicit none
+
+integer :: k, array(:)
+integer :: arr(0:size(array)-1)
+get_vx_num = 0
+do k = 0, size(arr) - 1
+    arr(k) = array(k+1)
+enddo
+
+do k = 0,size(arr)-1
+    !write(*,*) k, arr(k)
+    get_vx_num = get_vx_num + arr(k)
+enddo
+
+end function get_vx_num
+
 end module hyzer
 !==============================!
 
@@ -46,16 +65,26 @@ end module hyzer
 program main
 use hyzer; implicit none
 
-j = 4
-j2 = 0
+integer :: ns(0:9), vx_num, k
+! j = 4
+! j2 = 0
 
-call lattice
-call matrix_ele
-call pvect0
-call vxweight
+! call lattice
+! call matrix_ele
+! call pvect0
+! call vxweight
+
+do k = 0,9
+    ns(k) = 1
+    write(*,*) k
+enddo
+vx_num = 0
+vx_num = get_vx_num(ns)
+!write(*,*) vx_num
+
+
 
 end program main
-
 !===================!
 subroutine lattice
 !===================!
@@ -229,7 +258,7 @@ do iq = 0, max_bond_num
         enddo
     endif
 enddo
-write(*,*) nv
+
 
 !========================================!
 ! Off diagonal vertices
@@ -286,7 +315,7 @@ do iq=0,max_bond_num
         enddo
     endif
 enddo
-write(*,*)nv
+
 !======================================!
 ! Off diagonal vertices
 ! this represents TzDz, TpDm and TmDp
@@ -362,6 +391,6 @@ do iq=0,max_bond_num
         enddo
     endif
 enddo
-write(*,*) nv
+
 end subroutine vxweight
 !==================================!
