@@ -394,7 +394,7 @@ do i=1,nvx
     do ic=0,7
         do oc=0,7
             vxprb(oc,ic,i)=vxprb(oc,ic,i)/vxprb(7,ic,i) !for this step, we normalize all the probabilties, because before
-            !write(*,*) vxprb(7,ic,i), vxprb(oc,ic,i)
+            !cwrite(*,*) vxprb(7,ic,i), vxprb(oc,ic,i)
             if (vxprb(oc,ic,i).lt.1.e-6) then
                 write(*,*)vxprb(oc,ic,i)
                 vxprb(oc,ic,i)=-1. !we let some probabilities be like tt or tp, and they are >1
