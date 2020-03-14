@@ -16,7 +16,7 @@ save
 integer, parameter :: nx=8, ny=8, nn=nx*ny, nb=2*nn, nn2=nn*nn
 real(8), parameter :: z=4.d0 ! 2*nb/nn
 
-integer,parameter :: max_bond_num = 4**2 - 1, max_vx_num=4**4 - 1, op_num = 5 !five types of opers, see vxweight
+integer,parameter :: max_bond_num = 4**2 - 1, max_vx_num=4**4 - 1, op_num = 6-1 !SIX types of opers (0:5), see vxweight
 
 integer,parameter :: ntau=100
 
@@ -25,7 +25,7 @@ integer :: istep,mstep,nruns,equ
 
 integer :: xy(2,nn),xy1(0:nx-1,0:ny-1)
 
-integer :: l,mloop,nh , nv !number of vertex
+integer :: l,mloop,nh, nvx !nh = num of operators in opstring, nvx = number of vertex
 integer :: st(nn)
 integer :: ns2iq(0:3,0:3),iq2ns(0:1,0:max_bond_num)
 integer :: bond(0:1,nb),btyp(nb),phase(nn)

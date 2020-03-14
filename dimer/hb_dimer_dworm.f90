@@ -267,6 +267,8 @@ do iq=0,max_bond_num
     endif
 enddo
 
+awgt(:) = wgt(:)
+
 end subroutine pvect0
 !======================!
 
@@ -279,7 +281,7 @@ integer :: i,k,m,iq,iiv,opnum,iiq,jq
 integer :: ns(0:3)
 
 ivx(:)=-1; vxleg(:,:)=-1
-nv=0
+nvx=0
 
 !=========================================!
 ! for opnum, 0 = TzTz (diagonal), 1 = TpTm, 2 = TmTp
@@ -305,12 +307,12 @@ do iq = 0, max_bond_num
         do k=0,3
             iiv = iiv + ns(k)*(4**k)
         enddo
-        nv=nv+1
-        ivx(iiv) = nv; vxi(nv) = iiv
-        op(0,iq) = iq; vxoper(nv) = opnum  
-        vxcode(opnum,iq) = nv
+        nvx=nvx+1
+        ivx(iiv) = nvx; vxi(nvx) = iiv
+        op(0,iq) = iq; vxoper(nvx) = opnum  
+        vxcode(opnum,iq) = nvx
         do k = 0,3
-            vxleg(k,nv) = ns(k)
+            vxleg(k,nvx) = ns(k)
         enddo
         vx_matrix_ele(iiv) = wgt(iq) !for diagonals
     endif
@@ -337,16 +339,16 @@ do iq=0,max_bond_num
         do k=0,3
             iiv = iiv + ns(k)*(4**k)
         enddo
-        nv=nv+1
-        ivx(iiv) = nv; vxi(nv) = iiv
+        nvx=nvx+1
+        ivx(iiv) = nvx; vxi(nvx) = iiv
         jq=0
         do k=0,1
             jq=jq+ns(k+2)*(4**k) !encode the resulting vertex into an integer jq
         enddo
-        op(opnum,iq) = jq; vxoper(nv) = opnum  
-        vxcode(opnum,iq) = nv
+        op(opnum,iq) = jq; vxoper(nvx) = opnum  
+        vxcode(opnum,iq) = nvx
         do k = 0,3
-            vxleg(k,nv) = ns(k)
+            vxleg(k,nvx) = ns(k)
         enddo
         vx_matrix_ele(iiv) = 0.5*(j+j2)*2.d0 !weight of T+T- matrix ele 
     endif
@@ -360,16 +362,16 @@ do iq=0,max_bond_num
         do k=0,3
             iiv = iiv + ns(k)*(4**k)
         enddo
-        nv=nv+1
-        ivx(iiv) = nv; vxi(nv) = iiv
+        nvx=nvx+1
+        ivx(iiv) = nvx; vxi(nvx) = iiv
         jq=0
         do k=0,1
             jq=jq+ns(k+2)*(4**k)
         enddo
-        op(opnum,iq) = jq; vxoper(nv) = opnum  
-        vxcode(opnum,iq) = nv
+        op(opnum,iq) = jq; vxoper(nvx) = opnum  
+        vxcode(opnum,iq) = nvx
         do k = 0,3
-            vxleg(k,nv) = ns(k)
+            vxleg(k,nvx) = ns(k)
         enddo
         vx_matrix_ele(iiv) = 0.5*(j+j2)*2.d0 !weight of T+T- matrix ele 
     endif
@@ -395,16 +397,16 @@ do iq=0,max_bond_num
         do k=0,3
             iiv = iiv + ns(k)*(4**k)
         enddo
-        nv=nv+1
-        ivx(iiv) = nv; vxi(nv) = iiv
+        nvx=nvx+1
+        ivx(iiv) = nvx; vxi(nvx) = iiv
         jq=0
         do k=0,1
             jq=jq+ns(k+2)*(4**k) !encode the resulting vertex into an integer jq
         enddo
-        op(opnum,iq) = jq; vxoper(nv) = opnum  
-        vxcode(opnum,iq) = nv
+        op(opnum,iq) = jq; vxoper(nvx) = opnum  
+        vxcode(opnum,iq) = nvx
         do k = 0,3
-            vxleg(k,nv) = ns(k)
+            vxleg(k,nvx) = ns(k)
         enddo
         vx_matrix_ele(iiv) = 0.5*ABS(j-j2)*1.d0 !weight of TzDz matrix ele (CHECK IF GOT MINUS SIGN)
     endif
@@ -417,16 +419,16 @@ do iq=0,max_bond_num
         do k=0,3
             iiv = iiv + ns(k)*(4**k)
         enddo
-        nv=nv+1
-        ivx(iiv) = nv; vxi(nv) = iiv
+        nvx=nvx+1
+        ivx(iiv) = nvx; vxi(nvx) = iiv
         jq=0
         do k=0,1
             jq=jq+ns(k+2)*(4**k) !encode the resulting vertex into an integer jq
         enddo
-        op(opnum,iq) = jq; vxoper(nv) = opnum  
-        vxcode(opnum,iq) = nv
+        op(opnum,iq) = jq; vxoper(nvx) = opnum  
+        vxcode(opnum,iq) = nvx
         do k = 0,3
-            vxleg(k,nv) = ns(k)
+            vxleg(k,nvx) = ns(k)
         enddo
         vx_matrix_ele(iiv) = 0.5*ABS(j-j2)*2.d0 !weight of T+D- matrix ele (CHECK IF GOT MINUS SIGN)
     endif
@@ -439,16 +441,16 @@ do iq=0,max_bond_num
         do k=0,3
             iiv = iiv + ns(k)*(4**k)
         enddo
-        nv=nv+1
-        ivx(iiv) = nv; vxi(nv) = iiv
+        nvx=nvx+1
+        ivx(iiv) = nvx; vxi(nvx) = iiv
         jq=0
         do k=0,1
             jq=jq+ns(k+2)*(4**k) !encode the resulting vertex into an integer jq
         enddo
-        op(opnum,iq) = jq; vxoper(nv) = opnum  
-        vxcode(opnum,iq) = nv
+        op(opnum,iq) = jq; vxoper(nvx) = opnum  
+        vxcode(opnum,iq) = nvx
         do k = 0,3
-            vxleg(k,nv) = ns(k)
+            vxleg(k,nvx) = ns(k)
         enddo
         vx_matrix_ele(iiv) = 0.5*ABS(j-j2)*2.d0 !weight of T-D+ matrix ele (CHECK IF GOT MINUS SIGN)
     endif
@@ -466,7 +468,7 @@ integer :: ns(0:3),i,iiq,ic,oc,iiv,ns1(0:3),k,ns2(0:3),instate,outstate,vertex_n
 vxprb_t_worm(:,:,:,:)=0.d0!vxprb stores the probability of accepting the change
 vxprb_d_worm(:,:,:,:) =0.d0 
 vxnew(:,:,:,:)=0
-do i=1,nv
+do i=1,nvx
     iiq=vxi(i) !retrieve the binary number representing the vertex
     do k = 0,3
         ns(k)=mod(iiq,4); iiq=iiq/4 !undo the binary number to retrieve the spins
@@ -698,7 +700,7 @@ do i=1,nv
     enddo
 enddo
 
-do i=1,nv
+do i=1,nvx
     do ic=0,3
         do instate = 0,3
             do oc= 1,3
@@ -711,7 +713,7 @@ do i=1,nv
     enddo
 enddo
 
-do i=1,nv
+do i=1,nvx
     do ic=0,3
         do instate = 0,3
             do oc= 0,3
