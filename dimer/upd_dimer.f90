@@ -22,12 +22,14 @@ logical :: passed
 if(i.eq.0)then
 1   call dupdate
     call linkoper
-    call updloop(passed)
+    call updloop_t_worm(passed)
+    call updloop_d_worm(passed)
     if (.not.passed) goto 1
 else
 2   call dupdate
     call linkoper
-    call updloop(passed)
+    call updloop_t_worm(passed)
+    call updloop_d_worm(passed)
     if (.not.passed) goto 2
 endif
 
@@ -208,9 +210,9 @@ subroutine updloop_t_worm(passed)
 use blink; use hyzer; implicit none
 
 integer :: i
-integer :: j,k,p0,p1,p2,n4
-integer :: vx,vx0,nv,nv1,ml
-integer :: ic,ic0,is,is0,vp,oc,nop,nop1
+integer :: j,k,p0,p1,p2,n4,iiv
+integer :: vx,vx0,nv,ml,instate_aft_flip, outstate_aft_flip,new_vx
+integer :: ic,ic0,is,is0,vp,oc
 real(8) :: r,rndm
 logical :: passed
 
@@ -218,40 +220,166 @@ n4=4*nh
 ml=100*l
 nv=0
 do i=1,nl
-    nv1=0
-    p0=min(int(rndm()*n4),n4-1) !pick a random vertex leg
-    p1=p0
-    vx0=vert(p0/4) !get vertex number
-    ic0=mod(p0,4) !get an in leg number (between 0 to 3)
-    is0=vxleg(ic0,vx0) !get the site state of that leg, 0 to 3
+    ! since T+ or T- only acts on states 1 (-), 2 (0), 3 (+), find an instate that isnt 0
+    is0 = 0
+    do while (is0 == 0)
+        p0=min(int(rndm()*n4),n4-1) !pick a random vertex leg
+        p1=p0
+        vx0=vert(p0/4) !get vertex number
+        ic0=mod(p0,4) !get an in leg number (between 0 to 3)
+        is0=vxleg(ic0,vx0) !get the site state of that leg, 0 to 3
+    enddo
+
     do j=1,ml
         vp=p1/4
         vx=vert(vp)
         ic=mod(p1,4) !again calculate in leg number
+        is=vxleg(ic,vx)
+
+        if (j==1) then !if it is first time entering the loop
+            if (is0 == 2) then
+                r = rndm()
+                if (r.le.0.5) then 
+                    instate_aft_flip = act_tdp(is0)
+                else 
+                    instate_aft_flip = act_tdm(is0)
+                endif
+            else if (is0 == 1) then 
+                instate_aft_flip = act_tdp(1)
+            else
+                instate_aft_flip = act_tdm(3)
+            endif
+        else !if this is not first time entering loop, the instate is just state of prev outstate in linked list
+            instate_aft_flip = outstate_aft_flip
+        endif
+
         r=rndm()
         do oc=0,3
-            if (r.le.vxprb(oc,ic,vx)) then
-                vert(vp)=vxnew(oc,ic,vx) !if we accept a probability to exit from a certain leg, goto 10
-                exit
+            if (r.le.vxprb_t_worm(ic,oc,instate_aft_flip,vx)) then
+                new_vx = vxnew(ic,oc,instate_aft_flip,vx)
+                outstate_aft_flip = vxleg(oc,new_vx)
+                vert(vp)=new_vx !if we accept a probability to exit from a certain leg, goto 10
+                exit !if found a satisfactory out leg, exit this do loop
             endif
         enddo
-!        oc=3
-!10      vert(vp)=vxnew(oc,ic,vx) !update the vertex number
-        p1=8*vp+oc
+
+        p1=4*vp+oc
         nv=nv+1
-        if (p1==p0) goto 20
+        if ((p1==p0) .and. (vxleg(oc,vert(vp)) == vxleg(ic0,vert(p0/4))) ) goto 20 !!!!!!need to check same state also
         p1=link(p1) !traverse the linked list to the next leg that is linked
-        if (p1==p0) goto 20 !if the link is closed, go to 20
-     enddo
-     passed=.false.
-     return
+        if ((p1==p0) .and. (vxleg(oc,vert(vp)) == vxleg(ic0,vert(p0/4))) ) goto 20
+    enddo
+    passed=.false.
+    return
 20   lopers=lopers+dble(nv)
 !    if (lopers > 100*l) exit
 enddo
 j=0
 do i=1,l !after loop update is done, update the gstring to reflect the change in operators
     if (gstring(i) /= 0) then
-        gstring(i)=7*(gstring(i)/7)+vxoper(vert(j)) !here you can see that gstring(i) mod 7 gives the operator number (0-6)
+        gstring(i)=6*(gstring(i)/6)+vxoper(vert(j)) !here you can see that gstring(i) mod 6 gives the operator number (0-5)
+        j=j+1 !this is going over all the operators in the propagation we labelled earlier, 1,2,3....
+    endif
+enddo
+
+do i=1,nn
+    if (frst(i) /= -1) then
+        ic=mod(frst(i),2) !this step gets the in-leg index (0-2)
+        vp=frst(i)/6 !gets the index of the operator (1,2,3....) if you look at how i0 and ii scales, this works
+        st(i)=vxleg(ic,vert(vp)) !i think this doesnt change the value at st(i) at all..?
+        if ((st(i) .ne. 0) .or. (st(i) .ne. 1) .or. (st(i) .ne. 2) .or. (st(i) .ne. 3)) then
+            write(*,*)'wrong state',i,vp,ic,vert(vp), st(i)
+        endif
+    else
+        r = rndm()
+        if (r.le.0.25) then
+            st(i) = 0
+        else if (r.le.0.5) then
+            st(i) = 1
+        else if (r.le.0.75) then
+            st(i) = 2
+        else
+            st(i) = 3
+        endif
+        !if (rndm().lt.0.5) st(i)= 1-st(i) !how does this ensure the initial and final config is same..?
+        !ans: turns out even if this else statement is removed, the SSE algorithm still works.
+        !ultimately it does not matter, because this else statement is only triggered if that spin state
+        !has NO operators acting on it at all in the propagation, i.e even if you flip it,
+        !the initial and final state will remain unchanged, hence |alpha(0)> = !alpha(M> periodicity is fulfilled
+    endif
+enddo
+nloops=nloops+dble(nl)
+passed=.true.
+
+end subroutine updloop_t_worm
+!====================================!
+
+!=========================!
+subroutine updloop_d_worm(passed)
+!=========================!
+
+!changes in the configuration is achieved with the loop update, when we traversed the linked list
+!ACROSS periodic boundary conditions, i.e going from |\alpha(M)> to |\alpha(0)> state or vice-versa.
+!this WILL change the intial and final configurations TOGETHER, but they will continue to remain the same.
+
+use blink; use hyzer; implicit none
+
+integer :: i
+integer :: j,k,p0,p1,p2,n4
+integer :: vx,vx0,nv,ml,instate_aft_flip
+integer :: ic,ic0,is,is0,vp,oc,
+real(8) :: r,rndm
+logical :: passed
+
+n4=4*nh
+ml=100*l
+nv=0
+do i=1,nl
+    ! D,D+ and D- acts on all states
+    p0=min(int(rndm()*n4),n4-1) !pick a random vertex leg
+    p1=p0
+    vx0=vert(p0/4) !get vertex number
+    ic0=mod(p0,4) !get an in leg number (between 0 to 3)
+    is0=vxleg(ic0,vx0) !get the site state of that leg, 0 to 3
+
+    do j=1,ml
+        vp=p1/4
+        vx=vert(vp)
+        ic=mod(p1,4) !again calculate in leg number
+        is=vxleg(ic,vx)
+
+        if (is == 0) then
+            r = rndm()
+            if (r.le.0.5) then 
+                instate_aft_flip = act_tdp(is)
+            else 
+                instate_aft_flip = act_tdm(is)
+            endif
+        endif
+
+        r=rndm()
+        do oc=0,3
+            if (r.le.vxprb(ic,oc,instate_aft_flip,vx)) then
+                vert(vp)=vxnew(ic,oc,instate_aft_flip,vx) !if we accept a probability to exit from a certain leg, goto 10
+                exit !if found a satisfactory out leg, exit this do loop
+            endif
+        enddo
+
+        p1=4*vp+oc
+        nv=nv+1
+        if (p1==p0) goto 20
+        p1=link(p1) !traverse the linked list to the next leg that is linked
+        if (p1==p0) goto 20 !if the link is closed, go to 20
+        enddo
+        passed=.false.
+        return
+20   lopers=lopers+dble(nv)
+!    if (lopers > 100*l) exit
+enddo
+j=0
+do i=1,l !after loop update is done, update the gstring to reflect the change in operators
+    if (gstring(i) /= 0) then
+        gstring(i)=6*(gstring(i)/6)+vxoper(vert(j)) !here you can see that gstring(i) mod 6 gives the operator number (0-5)
         j=j+1 !this is going over all the operators in the propagation we labelled earlier, 1,2,3....
     endif
 enddo
@@ -259,24 +387,35 @@ enddo
 
 do i=1,nn
     if (frst(i) /= -1) then
-        ic=mod(frst(i),4) !this step gets the in-leg index (0-3)
-        vp=frst(i)/8 !gets the index of the operator (1,2,3....) if you look at how i0 and ii scales, this works
+        ic=mod(frst(i),2) !this step gets the in-leg index (0-2)
+        vp=frst(i)/6 !gets the index of the operator (1,2,3....) if you look at how i0 and ii scales, this works
         st(i)=vxleg(ic,vert(vp)) !i think this doesnt change the value at st(i) at all..?
-        if ((st(i) .lt. 0) .or. (st(i) .gt. 1)) then
+        if ((st(i) .ne. 0) .or. (st(i) .ne. 1) .or. (st(i) .ne. 2) .or. (st(i) .ne. 3)) then
             write(*,*)'wrong state',i,vp,ic,vert(vp), st(i)
         endif
     else
-        if (rndm().lt.0.5) st(i)= 1-st(i) !how does this ensure the initial and final config is same..?
+        r = rndm()
+        if (r.le.0.25) then
+            st(i) = 0
+        else if (r.le.0.5) then
+            st(i) = 1
+        else if (r.le.0.75) then
+            st(i) = 2
+        else
+            st(i) = 3
+        endif
+        !if (rndm().lt.0.5) st(i)= 1-st(i) !how does this ensure the initial and final config is same..?
         !ans: turns out even if this else statement is removed, the SSE algorithm still works.
         !ultimately it does not matter, because this else statement is only triggered if that spin state
         !has NO operators acting on it at all in the propagation, i.e even if you flip it,
         !the initial and final state will remain unchanged, hence |alpha(0)> = !alpha(M> periodicity is fulfilled
-        endif
+        !endif
+    endif
 enddo
 nloops=nloops+dble(nl)
 passed=.true.
 
-end subroutine updloop_t_worm
+end subroutine updloop_d_worm
 !====================================!
 
 !================!
