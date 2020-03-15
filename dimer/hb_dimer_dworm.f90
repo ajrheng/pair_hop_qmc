@@ -35,8 +35,8 @@ do i=1,nruns
         call mcstep(1)
     enddo
     call writeres(mstep)
-    call calcCorrStr(mstep)
-    call equatestg
+    ! call calcCorrStr(mstep)
+    ! call equatestg
     open(12,file='log.txt',status='unknown',access='append')
     write(12,*)'Completed run ',i
     close(12)
@@ -45,7 +45,7 @@ do i=1,nruns
     call writeconf
     close(20)
 enddo
-call writestg
+! call writestg
 deallocate(vert)
 deallocate(link)
 
@@ -251,13 +251,13 @@ do iq=0,max_bond_num
     iiq=iq
     s1=mod(iiq,4); iiq=iiq/4
     s2=mod(iiq,4); iiq=iiq/4
-    diag_weight = 0.5*(j+j2)*tdz_wgt(s1)*tdz_wgt(s2) !only for the diagonal elemets which is Tdz Tdz
+    diag_weight = 0.5*(j1+j2)*tdz_wgt(s1)*tdz_wgt(s2) !only for the diagonal elemets which is Tdz Tdz
     wgt(iq)= diag_weight
     !if (wgt(iq).gt.amax) amax=wgt(iq) !set a maximum weight
 enddo
 
-!amax=amax+1.d0 !shift by 1/2(j+j2) to make certain diagonal vertices zero???
-wgt(:) = wgt(:) + 0.5 * (j+j2)
+!amax=amax+1.d0 !shift by 1/2(j1+j2) to make certain diagonal vertices zero???
+wgt(:) = wgt(:) + 0.5 * (j1+j2)
 do iq=0,max_bond_num
     !awgt(iq)=amax-wgt(iq)
     if (wgt(iq).gt.1.d-6) then
@@ -277,7 +277,7 @@ subroutine vxweight
 !==========================!
 use hyzer; implicit none
 
-integer :: i,k,m,iq,iiv,opnum,iiq,jq
+integer :: i,k,iq,iiv,opnum,iiq,jq
 integer :: ns(0:3)
 
 ivx(:)=-1; vxleg(:,:)=-1
@@ -350,7 +350,7 @@ do iq=0,max_bond_num
         do k = 0,3
             vxleg(k,nvx) = ns(k)
         enddo
-        vx_matrix_ele(iiv) = 0.5*(j+j2)*2.d0 !weight of T+T- matrix ele 
+        vx_matrix_ele(iiv) = 0.5*(j1+j2)*2.d0 !weight of T+T- matrix ele 
     endif
 
     if (act_tdm(ns(0)) /= -1 .and. act_tdp(ns(1)) /= -1) then !if it is TmTp
@@ -373,7 +373,7 @@ do iq=0,max_bond_num
         do k = 0,3
             vxleg(k,nvx) = ns(k)
         enddo
-        vx_matrix_ele(iiv) = 0.5*(j+j2)*2.d0 !weight of T+T- matrix ele 
+        vx_matrix_ele(iiv) = 0.5*(j1+j2)*2.d0 !weight of T+T- matrix ele 
     endif
 enddo
 
@@ -408,7 +408,7 @@ do iq=0,max_bond_num
         do k = 0,3
             vxleg(k,nvx) = ns(k)
         enddo
-        vx_matrix_ele(iiv) = 0.5*ABS(j-j2)*1.d0 !weight of TzDz matrix ele (CHECK IF GOT MINUS SIGN)
+        vx_matrix_ele(iiv) = 0.5*ABS(j1-j2)*1.d0 !weight of TzDz matrix ele (CHECK IF GOT MINUS SIGN)
     endif
 
     if (act_tdp(ns(0)) /= -1 .and. act_ddm(ns(1)) /= -1) then
@@ -430,7 +430,7 @@ do iq=0,max_bond_num
         do k = 0,3
             vxleg(k,nvx) = ns(k)
         enddo
-        vx_matrix_ele(iiv) = 0.5*ABS(j-j2)*2.d0 !weight of T+D- matrix ele (CHECK IF GOT MINUS SIGN)
+        vx_matrix_ele(iiv) = 0.5*ABS(j1-j2)*2.d0 !weight of T+D- matrix ele (CHECK IF GOT MINUS SIGN)
     endif
 
     if (act_tdm(ns(0)) /= -1 .and. act_ddp(ns(1)) /= -1) then
@@ -452,7 +452,7 @@ do iq=0,max_bond_num
         do k = 0,3
             vxleg(k,nvx) = ns(k)
         enddo
-        vx_matrix_ele(iiv) = 0.5*ABS(j-j2)*2.d0 !weight of T-D+ matrix ele (CHECK IF GOT MINUS SIGN)
+        vx_matrix_ele(iiv) = 0.5*ABS(j1-j2)*2.d0 !weight of T-D+ matrix ele (CHECK IF GOT MINUS SIGN)
     endif
 enddo
 

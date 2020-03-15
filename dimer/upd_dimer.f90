@@ -41,7 +41,7 @@ subroutine dupdate
 !==================================!
 use hyzer; use bmsr; implicit none
 
-integer :: i,ii,j,k,q,o,b,s1,s2,s3,s4,ss1,ss2,ss3,ss4,iiq
+integer :: i,ii,j,k,q,o,b,s1,s2,s3,s4,iiq,jjq
 integer :: ns(0:1),nms
 real(8) :: rndm,p,addp,delp
 integer :: tt1,tt2,tt3,tt4,nu,nk,np,nh1,last,ph1,ph2,ph3,ph4,qi,qj
@@ -97,9 +97,9 @@ do i=1,l
 enddo
 
 dl=dble(nh1-last)
-ssum=ssum+dl*dble(sa)
-sstr=sstr+dl*dble(sa)**2
-sstr=sstr/(dble(nh1+1)*dble(nn))
+! ssum=ssum+dl*dble(sa)
+! sstr=sstr+dl*dble(sa)**2
+! sstr=sstr/(dble(nh1+1)*dble(nn))
 ! if (nh1.ne.0) then
 !     ssus=(ssum**2)/(dble(nh1)*dble(nh1+1)*dble(nn))
 !     ssus=ssus+sstr/dble(nh1+1)
@@ -112,8 +112,8 @@ sstr=sstr/(dble(nh1+1)*dble(nn))
 !     enddo
 ! enddo
 
-avu=avu+dble(nu)
-umag=umag+dble(su)/dble(nn)
+! avu=avu+dble(nu)
+! umag=umag+dble(su)/dble(nn)
 ! sxu=sxu+beta*(dble(su)**2)/dble(nn)
 ! ssa=ssa+sstr
 ! sxa=sxa+beta*ssus
@@ -327,7 +327,7 @@ use blink; use hyzer; implicit none
 integer :: i
 integer :: j,k,p0,p1,p2,n4
 integer :: vx,vx0,nv,ml,instate_aft_flip
-integer :: ic,ic0,is,is0,vp,oc,
+integer :: ic,ic0,is,is0,vp,oc
 real(8) :: r,rndm
 logical :: passed
 
@@ -359,7 +359,7 @@ do i=1,nl
 
         r=rndm()
         do oc=0,3
-            if (r.le.vxprb(ic,oc,instate_aft_flip,vx)) then
+            if (r.le.vxprb_d_worm(ic,oc,instate_aft_flip,vx)) then
                 vert(vp)=vxnew(ic,oc,instate_aft_flip,vx) !if we accept a probability to exit from a certain leg, goto 10
                 exit !if found a satisfactory out leg, exit this do loop
             endif

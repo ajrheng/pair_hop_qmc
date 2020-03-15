@@ -20,7 +20,7 @@ integer,parameter :: max_bond_num = 4**2 - 1, max_vx_num=4**4 - 1, op_num = 6-1 
 
 integer,parameter :: ntau=100
 
-real(8) :: j,j2,beta
+real(8) :: j1,j2,beta
 integer :: istep,mstep,nruns,equ
 
 integer :: xy(2,nn),xy1(0:nx-1,0:ny-1)
@@ -35,7 +35,7 @@ integer :: vxoper(max_vx_num),vxcode(0:op_num,0:max_bond_num),vxleg(0:3,max_vx_n
 integer :: op(0:op_num,0:max_bond_num)
 integer :: vxnew(0:3,0:3,0:3,max_vx_num) !vxnew(inleg, outleg, in_state_aft_flip, max_vx_num)
 integer :: ivx(0:max_vx_num),vxi(max_vx_num) 
-real(8) :: vxprb_t_worm(0:3,0:3,0:3,max_vx_num), vxprb_dz_worm(0:3,0:3,0:3,max_vx_num), vxprb_dpm_worm(0:3,0:3,0:3,max_vx_num) !vxprb(inleg, outleg, in_state_aft_flip ,max_vx_num)
+real(8) :: vxprb_t_worm(0:3,0:3,0:3,max_vx_num), vxprb_d_worm(0:3,0:3,0:3,max_vx_num) !vxprb(inleg, outleg, in_state_aft_flip ,max_vx_num)
 real(8) :: vx_matrix_ele(max_vx_num) !given the vertex_num, gives the value of the matrix ele
 
 integer, allocatable :: gstring(:)
@@ -70,7 +70,7 @@ use hyzer; implicit none
 
 call read_params
 write(*,*)'read params'
-write(*,*)"tt: ",tt,"tp: ",tp,"vv: ",vv,"vv2: ",vv2,"mu: ",mu,"beta: ",beta
+write(*,*)"j1: ",j1,"j2: ",j2,"beta: ",beta
 
 call initran
 call initconf
@@ -271,11 +271,8 @@ subroutine read_params
 use hyzer;    implicit none
 
 open (unit=10,file='read.in',status='old')
-read(10,*)tt!1
-read(10,*)tp!start with 0
-read(10,*)vv!2,3
-read(10,*)vv2
-read(10,*)mu!2,3,4...
+read(10,*)j1!1
+read(10,*)j2!start with 0
 read(10,*)beta!8*nx
 read(10,*)istep!10000
 read(10,*)nruns!10
@@ -289,10 +286,11 @@ end subroutine read_params
 !======================================================!
 subroutine initran
 !======================================================!
-use hyzer, only: iir,jjr,kkr,nnr;   implicit none
+use hyzer, only: iir,jjr,kkr,nnr;
+implicit none
 
 integer :: is,js,ks,ls
-real(8) ::    rndm
+real(8) :: rndm
 
 open(10,file='rand.in',status='old')
 read(10,*)is
