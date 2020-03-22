@@ -4,15 +4,11 @@ subroutine simulation
 use hyzer; implicit none
 
 integer :: i,j
-real(8) :: beta_store
 
 call lattice
 call pvect0
 call vxweight
 call initvrtx
-
-beta_store = beta
-beta = 1.d0
 
 if (istep.ne.0) then
     open(12,file='log.txt',status='unknown',access='append')
@@ -21,16 +17,9 @@ if (istep.ne.0) then
     lopers=0.d0
     nloops=0.d0
     do i=1,istep
-
         call mcstep(0)
         call adjstl
         if (mod(i,istep/20).eq.0) call adjnl
-        if ((mod(i,3000)==0) .and. (beta < beta_store))  then
-            beta = beta + 1.d0
-            open(12,file='log.txt',status='unknown',access='append')
-            write(12,*)'beta= ',beta
-            close(12)
-        endif
     enddo
     open(12,file='log.txt',status='unknown',access='append')
     write(12,*)'Completed equilibration: L = ',l
@@ -242,9 +231,8 @@ subroutine vxweight
 !==========================!
 use hyzer; implicit none
 
-integer :: i,j_next,j_before,k,m,iq,jq,iiv,nv
+integer :: i,j,k,m,iq,jq,iiv,nv
 integer :: ns(0:7),ns1(0:7)
-integer :: i2,i3,i4
 real(8) :: vvsum,musum
 
 ivx(:)=-1; vxleg(:,:)=-1
@@ -278,7 +266,6 @@ do iq=0,15
 enddo
 !========================================!
 ! single boson hopping vertices
-! single boson hopping operators are numbered 1-4 (i.e. opcode(1-4,iq))
 !========================================!
 do iq=0,15
     ns(0:7)=0
@@ -289,10 +276,10 @@ do iq=0,15
 
     do i=0,3
         ns1(:)=ns(:)
-        j_next=mod(i+1,4) !find the neighboring site
-        if(ns1(i)/= ns1(j_next)) then !if the next site is not the same as the previous site, single hop to that site
+        j=mod(i+1,4) !find the neighboring site
+        if(ns1(i)/= ns1(j)) then !if the next site is not the same as the previous site, single hop to that site
             ns1(i+4)=1-ns(i) !flip old site.
-            ns1(j_next+4)=1-ns(j_next) !flip new site, so now boson hopped from old site to new site
+            ns1(j+4)=1-ns(j) !flip new site, so now boson hopped from old site to new site
             iiv=0
             do k=0,7
                 iiv=iiv+ns1(k)*(2**k) !this encodes it as a binary 2 bit number. 2^0 + 2^1 + ...
@@ -313,7 +300,6 @@ do iq=0,15
 enddo
 !======================================!
 ! pair hopping vertices
-! pair hopping operators are numbered 5 and 6 (opcode(5-6,iq))
 !======================================!
 !repeat the above analysis for pair hopping vertices. idea is the same.
 do iq=0,15
@@ -340,7 +326,7 @@ do iq=0,15
         do k=0,7
             vxleg(k,nv)=ns(k)
         enddo
-    elseif  ((ns(0).eq.1).and.(ns(1).eq.1) &
+     elseif  ((ns(0).eq.1).and.(ns(1).eq.1) &
         .and.(ns(2).eq.0).and.(ns(3).eq.0))then
         ns(4)=0; ns(5)=0; ns(6)=1; ns(7)=1
         iiv=0
@@ -358,7 +344,7 @@ do iq=0,15
         do k=0,7
             vxleg(k,nv)=ns(k)
         enddo
-    elseif  ((ns(0).eq.1).and.(ns(1).eq.0) &
+     elseif  ((ns(0).eq.1).and.(ns(1).eq.0) &
         .and.(ns(2).eq.0).and.(ns(3).eq.1))then
         ns(4)=0; ns(5)=1; ns(6)=1; ns(7)=0
         iiv=0
@@ -376,7 +362,7 @@ do iq=0,15
         do k=0,7
             vxleg(k,nv)=ns(k)
         enddo
-    elseif  ((ns(0).eq.0).and.(ns(1).eq.1) &
+     elseif  ((ns(0).eq.0).and.(ns(1).eq.1) &
         .and.(ns(2).eq.1).and.(ns(3).eq.0))then
         ns(4)=1; ns(5)=0; ns(6)=0; ns(7)=1
         iiv=0
@@ -396,95 +382,6 @@ do iq=0,15
         enddo
     endif
 enddo
-
-!======================================!
-! pair rotation vertices
-! pair rotation operators are labelled 7-10 (opcode(7-10,iq))
-! i.e. there are 4 different pair rotation operators
-!======================================!
-do iq=0,15
-    ns(0:7)=0
-    do i=0,3
-        if(btest(iq,i)) ns(i)=1
-        ns(i+4)=ns(i)
-    enddo
-
-    do i=0,3
-        ns1(:)=ns(:)
-        j_next=mod(i+1,4) !find the next neighboring site
-        j_before=mod(i+3,4) !find the before neighboring site
-        if( ((ns1(i)/= ns1(j_next) .and. ns1(i) == ns1(j_before)) &
-        .or. (ns1(i) == ns1(j_next) .and. ns1(i) /= ns1(j_before))) &
-        .and. (ns1(0) + ns1(1) + ns1(2) + ns1(3)) == 2 .and. ns1(i) == 1) then !if the next site is not the same as the previous site, single hop to that site
-            ns1(j_before+4)=1-ns(j_before) !flip
-            ns1(j_next+4)=1-ns(j_next) !flip. after these two flips, a pair rotation has occured
-            iiv=0
-            do k=0,7
-                iiv=iiv+ns1(k)*(2**k) !this encodes it as a binary 2 bit number. 2^0 + 2^1 + ...
-            enddo
-            nv=nv+1
-            ivx(iiv)=nv; vxi(nv)=iiv
-            jq=0
-            do k=0,3
-                jq=jq+ns1(k+4)*(2**k)
-            enddo
-            op(i+7,iq)=jq; vxoper(nv)=i+7 !act operator number i+7 on initial plaquette config iq gives jq
-            vxcode(i+7,iq)=nv !given operator number (i+7) and the initial state iq, you know what vertex number it is referring to
-            !adding 7 gives the range 7-10, since i = 0-3.
-            do k=0,7
-                vxleg(k,nv)=ns1(k)
-            enddo
-        endif
-    enddo
-enddo
-
-
-!======================================!
-! ring exchange vertices
-!there is only one ring exchange operator, so it is labelled 11 (opcode(11,iq))
-!======================================!
-do iq=0,15
-    ns(0:7)=0
-    do i=0,3
-        if(btest(iq,i)) ns(i)=1
-        ns(i+4)=ns(i)
-    enddo
-
-    do i=0,1 !just looping 0th and 1st site is enough to produce the ring exchange vertices
-        !looping across all sites in a plaquette actually double counts the ring exchange vertices
-        ns1(:)=ns(:)
-        i2=mod(i+1,4) !find the next neighboring site
-        i3=mod(i+2,4) !next-next neighboring site
-        i4=mod(i+3,4) !before neighboring site
-        if(ns1(i)/= ns1(i2) .and. ns1(i) == ns1(i3) .and. ns1(i2) == ns1(i4) &
-        .and. ns1(0) + ns1(1) + ns1(2) + ns1(3) == 2 .and. ns1(i) == 1) then !checks for a pair rotatable vertex
-            ns1(i+4)=1-ns(i) !flip
-            ns1(i2+4)=1-ns(i2)
-            ns1(i3+4)=1-ns(i3)
-            ns1(i4+4)=1-ns(i4)
-            iiv=0
-            do k=0,7
-                iiv=iiv+ns1(k)*(2**k) !this encodes it as a binary 2 bit number. 2^0 + 2^1 + ...
-            enddo
-            nv=nv+1
-            ivx(iiv)=nv; vxi(nv)=iiv
-            jq=0
-            do k=0,3
-                jq=jq+ns1(k+4)*(2**k)
-            enddo
-            op(11,iq)=jq; vxoper(nv)=11
-            vxcode(11,iq)=nv 
-            do k=0,7
-                vxleg(k,nv)=ns1(k)
-            enddo
-        endif
-    enddo
-enddo
-
-!note that Fortran 90 allows you to access and initialize elements in an array when it is 
-!out of bounds, but these values are not really 'part of the array', and if you print
-!the array out, these numbers beyond the bounds of the array are chopped off.
-!they probably remain in the memory somewhere, though.
 
 end subroutine vxweight
 !==================================!

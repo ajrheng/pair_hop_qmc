@@ -20,7 +20,9 @@ if (istep.ne.0) then
     do i=1,istep
         call mcstep(0)
         call adjstl
-        if (mod(i,istep/20).eq.0) call adjnl
+        if (mod(i,istep/20).eq.0) then 
+            call adjnl
+        endif
     enddo
     open(12,file='log.txt',status='unknown',access='append')
     write(12,*)'Completed equilibration: L = ',l
@@ -54,15 +56,17 @@ end subroutine simulation
 !===================!
 subroutine zerodata
 !===================!
-use bmsr; use hyzer; implicit none
+!use bmsr; 
+use hyzer; implicit none
 
-avu=0.d0
-avk=0.d0
-avp=0.d0
-umag=0.d0
-sxu=0.d0
-ssa=0.d0
-sxa=0.d0
+en = 0.d0
+! avu=0.d0
+! avk=0.d0
+! avp=0.d0
+! umag=0.d0
+! sxu=0.d0
+! ssa=0.d0
+! sxa=0.d0
 ! rhox=0.d0
 ! rhoy=0.d0
 ! rhotx=0.d0
@@ -141,7 +145,7 @@ subroutine lattice
 !===================!
 use hyzer; implicit none
 
-integer :: i,q,ix,iy,ix1,iy1,ix2,iy2,ix3,iy3,ix4,iy4,k1,k2
+integer :: i,q,ix,iy,ix1,iy1,ix2,iy2
 integer :: iq,iiq,ns(0:1)
 
 i=0
@@ -175,7 +179,7 @@ do ix=0,ny-1
     enddo
 enddo
 
-do iq=0,max_bond_num !there are a total of 4 possible plaquette configurations (2^2)
+do iq=0,max_bond_num 
     iiq=iq
     ns(0)=mod(iiq,4); iiq=iiq/4 !we store these configurations as a 4-bit number
     ns(1)=mod(iiq,4); iiq=iiq/4 !eg. 7 corresponds to 3-1, so ns2iq(3,1) = 7
@@ -252,7 +256,7 @@ do iq=0,max_bond_num
     !if (wgt(iq).gt.amax) amax=wgt(iq) !set a maximum weight
 enddo
 
-!amax=amax+1.d0 !shift by 1/2(j1+j2) to make certain diagonal vertices zero???
+!shift by 1/2(j1+j2) to make certain diagonal vertices zero???
 wgt(:) = wgt(:) + 0.5 * (j1+j2)
 do iq=0,max_bond_num
     !awgt(iq)=amax-wgt(iq)
@@ -276,7 +280,7 @@ use hyzer; implicit none
 integer :: i,k,iq,iiv,opnum,iiq,jq
 integer :: ns(0:3)
 
-ivx(:)=-1; vxleg(:,:)=-1
+ivx(:)=-1; vxleg(:,:)=-1; vxcode(:,:) = -1
 nvx=0
 
 !=========================================!
@@ -305,7 +309,7 @@ do iq = 0, max_bond_num
         enddo
         nvx=nvx+1
         ivx(iiv) = nvx; vxi(nvx) = iiv
-        op(0,iq) = iq; vxoper(nvx) = opnum  
+        op(opnum,iq) = iq; vxoper(nvx) = opnum  
         vxcode(opnum,iq) = nvx
         do k = 0,3
             vxleg(k,nvx) = ns(k)
@@ -329,6 +333,7 @@ do iq=0,max_bond_num
     if (act_tdp(ns(0)) /= -1 .and. act_tdm(ns(1)) /= -1) then
         !meaning TpTm causes a valid vertex on this state
         opnum = 1
+        !write(*,*)'iq',iq, 'ns0', ns(0), 'ns1', ns(1), 'opnum', opnum, act_tdp(ns(0)), act_tdm(ns(1))
         ns(2) = act_tdp(ns(0))
         ns(3) = act_tdm(ns(1))
         iiv = 0
@@ -352,6 +357,7 @@ do iq=0,max_bond_num
     if (act_tdm(ns(0)) /= -1 .and. act_tdp(ns(1)) /= -1) then !if it is TmTp
     !two if statements in case one vertex number allows both TpTm and TmTp to act on it.
         opnum = 2
+        !write(*,*)'iq',iq, 'ns0', ns(0), 'ns1', ns(1), 'opnum', opnum, act_tdm(ns(0)), act_tdp(ns(1))
         ns(2) = act_tdm(ns(0))
         ns(3) = act_tdp(ns(1))
         iiv = 0
@@ -387,6 +393,7 @@ do iq=0,max_bond_num
 
     if ( act_tdz(ns(0)) /= -1 .and. act_ddz(ns(1)) /= -1) then !if Tz Dz
         opnum = 3
+        !write(*,*)'iq',iq, 'ns0', ns(0), 'ns1', ns(1), 'opnum', opnum, act_tdz(ns(0)), act_ddz(ns(1))
         ns(2) = act_tdz(ns(0))
         ns(3) = act_ddz(ns(1))
         iiv = 0
@@ -409,6 +416,7 @@ do iq=0,max_bond_num
 
     if (act_tdp(ns(0)) /= -1 .and. act_ddm(ns(1)) /= -1) then
         opnum = 4
+        !write(*,*)'iq',iq, 'ns0', ns(0), 'ns1', ns(1), 'opnum', opnum, act_tdp(ns(0)), act_ddm(ns(1))
         ns(2) = act_tdp(ns(0))
         ns(3) = act_ddm(ns(1))
         iiv = 0
@@ -431,6 +439,7 @@ do iq=0,max_bond_num
 
     if (act_tdm(ns(0)) /= -1 .and. act_ddp(ns(1)) /= -1) then
         opnum = 5
+        !write(*,*)'iq',iq, 'ns0', ns(0), 'ns1', ns(1), 'opnum', opnum, act_tdm(ns(0)), act_ddp(ns(1))
         ns(2) = act_tdm(ns(0))
         ns(3) = act_ddp(ns(1))
         iiv = 0

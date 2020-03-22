@@ -1,8 +1,0 @@
- Starting run            1
- Starting equilibration.
- beta=    2.0000000000000000     
- Starting equilibration.
- Starting equilibration.
- beta=    2.0000000000000000     
- beta=    3.0000000000000000     
- beta=    4.0000000000000000     
