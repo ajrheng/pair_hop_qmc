@@ -13,7 +13,7 @@
 module hyzer
 save
 
-integer, parameter :: nx=8, ny=8, nn=nx*ny, nb=2*nn, nn2=nn*nn
+integer, parameter :: nx=16, ny=16, nn=nx*ny, nb=2*nn, nn2=nn*nn
 real(8), parameter :: z=4.d0 ! 2*nb/nn
 
 integer,parameter :: max_bond_num = 4**2 - 1, max_vx_num=4**4 - 1, op_num = 6-1 !SIX types of opers (0:5), see vxweight
@@ -25,7 +25,7 @@ integer :: istep,mstep,nruns,equ
 
 integer :: xy(2,nn),xy1(0:nx-1,0:ny-1)
 
-integer :: l,mloop,nh, nvx !nh = num of operators in opstring, nvx = number of vertex
+integer :: l,mloop,nh,nvx,num_op_tot !nh = num of operators in opstring, nvx = number of vertex, num_op_tot = total ops in opstring over all runs
 integer :: st(nn)
 integer :: ns2iq(0:3,0:3),iq2ns(0:1,0:max_bond_num)
 integer :: bond(0:1,nb),btyp(nb),phase(nn)
@@ -47,22 +47,23 @@ integer, allocatable :: vert(:)
 real(8) :: tdp_wgt(0:3), tdm_wgt(0:3), tdz_wgt(0:3), ddp_wgt(0:3), ddm_wgt(0:3), ddz_wgt(0:3)
 integer :: act_tdp(0:3), act_tdm(0:3), act_tdz(0:3), act_ddp(0:3), act_ddm(0:3), act_ddz(0:3)
 
-
-integer :: nl
-real(8) :: lopers,nloops
+integer :: nl_t, nl_d
+real(8) :: lopers_t,nloops_t,lopers_d, nloops_d
 
 integer :: iir,jjr,kkr,nnr
+
+real(8):: en !energy
 
 end module hyzer
 !==============================!
 
-!=============================!
-module bmsr
+! !=============================!
+! module bmsr
 
-real(8),save :: avu,avk,avp,umag,sxu,ssa,sxa,rhox,rhoy,rhotx,rhoty,rhotpx,rhotpy
+! real(8),save :: avu,avk,avp,umag,sxu,ssa,sxa,rhox,rhoy,rhotx,rhoty,rhotpx,rhotpy
 
-end module bmsr
-!============================!
+! end module bmsr
+! !============================!
 
 !============================!
 program main
@@ -83,29 +84,35 @@ end program main
 !==========================!
 subroutine writeres (nmsr)
 !==========================!
-
-use bmsr; use hyzer;
+use hyzer;
 
 implicit none
 
-integer :: i,j,k,nmsr,x,y,dx,dy,k1,k2
+integer :: nmsr
 
-umag=umag/dble(nmsr)
-avu=-avu/(dble(beta)*dble(nmsr)*dble(nn))
-avu=avu+amax*dble(nb/nn)
-avk=-avk/(dble(beta)*dble(nmsr)*dble(nn))
-avp=-avp/(dble(beta)*dble(nmsr)*dble(nn))
-sxu=sxu/dble(nmsr)
-ssa=ssa/dble(nmsr)
-sxa=sxa/dble(nmsr)
+en = - num_op_tot/(dble(nmsr)*dble(beta)) !energy = <n>/beta = n/(nmsr*beta)
+!en = en + (amax *dble(nb))
+en = en - ( 0.5*(j1+j2)* dble(nb) )!minus away 1/2(j1+j2)*nb, the diagonal shift
+en = en/dble(nn) !energy PER dimer
 
-open(UNIT=10,FILE='enr.dat',STATUS='unknown',ACCESS='append')
-write(10,*)avu,avk,avp
+! umag=umag/dble(nmsr)
+! avu=-avu/(dble(beta)*dble(nmsr)*dble(nn))
+! avu=avu+amax*dble(nb/nn)
+! avk=-avk/(dble(beta)*dble(nmsr)*dble(nn))
+! avp=-avp/(dble(beta)*dble(nmsr)*dble(nn))
+! sxu=sxu/dble(nmsr)
+! ssa=ssa/dble(nmsr)
+! sxa=sxa/dble(nmsr)
+
+
+
+open(UNIT=10,FILE='energy.txt',STATUS='unknown',ACCESS='append')
+write(10,*)en
 close(10)
 
-open(UNIT=10,FILE='uni.dat',STATUS='unknown',ACCESS='append')
-write(10,*)sxu,umag
-close(10)
+! open(UNIT=10,FILE='uni.dat',STATUS='unknown',ACCESS='append')
+! write(10,*)sxu,umag
+! close(10)
 
 
 end subroutine writeres
@@ -118,7 +125,9 @@ use hyzer; implicit none
 integer :: i
 real(8) :: rndm
 
-l=20; nh=0; nl=5
+l=20; nh=0; nl_t=5; nl_d=5; num_op_tot = 0
+
+st(:) = -1
 
 do i=1,nn
     st(i)=int(rndm()*4.0)
@@ -128,7 +137,7 @@ allocate(gstring(l))
 gstring(:)=0
 
 allocate(vert(0:l-1))
-allocate(link(0:8*l-1))
+allocate(link(0:4*l-1))
 
 end subroutine initconf
 !=====================================!
@@ -140,7 +149,7 @@ use hyzer; implicit none
 
 integer i
 
-read(20,*)l,nh,nl
+read(20,*)l,nh,nl_t
 do i=1,nn
     read(20,*)st(i)
 enddo
@@ -156,21 +165,19 @@ subroutine writeconf
 !====================!
 use hyzer; implicit none
 
-integer :: i,no
-real :: mn
+integer :: i
 
-no=0
-write(20,*)"l:",l,"nh:",nh,"nl:",nl
+write(20,*)"l:",l,"nh:",nh,"nl_t:",nl_t, "nl_d", nl_d
 do i=1,nn
-    if (st(i)==1) no=no+1
+    ! if (st(i)==1) no=no+1
     write(20,"(i1,a1)",advance="no")st(i)," "
     if (mod(i,nx)==0) then
         write(20,*)
     endif
 enddo
-mn=no/dble(nn)
-write(20,*)"Average density:",mn
-write(20,*)"----------------------------------------"
+! mn=no/dble(nn)
+! write(20,*)"Average density:",mn
+! write(20,*)"----------------------------------------"
 
 end subroutine writeconf
 !========================!

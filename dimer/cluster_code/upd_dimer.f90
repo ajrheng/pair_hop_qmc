@@ -10,30 +10,31 @@ end module blink
 !===============!
 
 !=====================!
-subroutine mcstep (i)
+subroutine mcstep (i,num_run, num_step)
 !=====================!
 
 implicit none
 
-integer :: i
+integer :: i, num_run, num_step
 logical :: passed
 
+open(30,file='error.txt',status='unknown',access='append')
 if(i.eq.0)then
 1   call dupdate
-    call linkoper
-    call updloop_t_worm(passed) 
+    call linkoper(num_run, num_step)
+    call updloop_t_worm(passed,num_run, num_step) 
     if (.not.passed) goto 1
-    call updloop_d_worm(passed)
+    call updloop_d_worm(passed,num_run, num_step)
     if (.not.passed) goto 1
 else
 2   call dupdate
-    call linkoper
-    call updloop_t_worm(passed)
+    call linkoper(num_run,num_step)
+    call updloop_t_worm(passed,num_run,num_step)
     if (.not.passed) goto 2
-    call updloop_d_worm(passed)
+    call updloop_d_worm(passed,num_run,num_step)
     if (.not.passed) goto 2
 endif
-
+close(30)
 end subroutine mcstep
 !=====================!
 
@@ -44,7 +45,7 @@ use hyzer; implicit none
 
 integer :: i,ii,k,q,o,iiq,jjq
 integer :: ns(0:1)
-real(8) :: rndm,p,addp,delp, dl
+real(8) :: rndm,p,addp,delp, dl, num_op
 integer :: nu,nk,nh1,last
 
 nu=0;nk=0!nu=number of diagonal operators, nk=number of off-diagonal operators
@@ -98,6 +99,16 @@ do i=1,l
     endif
 enddo
 
+!separate do loop for measuring num of operators to reduce confusion. 
+num_op = 0
+do i = 1,l
+    ii = gstring(i)
+    if (ii/=0) then
+        num_op = num_op + 1
+    endif
+enddo
+
+num_op_tot = num_op_tot + num_op
 dl=dble(nh1-last)
 ! ssum=ssum+dl*dble(sa)
 ! sstr=sstr+dl*dble(sa)**2
@@ -130,10 +141,11 @@ end subroutine dupdate
 !=======================================!
 
 !====================!
-subroutine linkoper
+subroutine linkoper(num_run,num_step)
 !====================!
 use blink; use hyzer; implicit none
 
+integer :: num_run, num_step
 integer :: i0,i1,ii,k,o,iiq,jjq
 integer :: p,q,p0,p1,s0,s1
 integer :: ns(0:1)
@@ -157,9 +169,10 @@ do p=1,l
         iiq=ns2iq(ns(0),ns(1))
         vert(ii)=vxcode(o,iiq) !store vertex number, we are labelling the operators sequentually from propagation 1, 2,3 ..
         if (vert(ii) == -1) then
-            write(*,*)'s0',s0,'s1',s1,'ns0',ns(0),'ns1',ns(1)
-            write(*,*)'ii',ii, 'vert(ii)', vert(ii), 'o', o, 'iiq', iiq, 'q', q
-            write(*,*)
+            write(30,*)"num run", num_run, "mcstep", num_step
+            write(30,*)'s0',s0,'s1',s1,'ns0',ns(0),'ns1',ns(1)
+            write(30,*)'ii',ii, 'vert(ii)', vert(ii), 'o', o, 'iiq', iiq, 'q', q
+            write(30,*)
         endif
         jjq=op(o,iiq) !binary number for resulting plaqeutte state after action of operator
         do k=0,1
@@ -168,7 +181,6 @@ do p=1,l
             !this is necessary for the "vert(ii) = vxcode(o,iiq)" line for the subsequent operators
             !to store the correct vertex number.
         enddo
-!       pos(ii)=q
         p0=last(s0)
         p1=last(s1)
         if (p0/=-1) then
@@ -201,11 +213,14 @@ do s0=1,nn !now link the first and last ones together
 enddo
 !no=nh
 
+! do p = 0, 4*l-1
+!     write(*,*) 'p', p, 'link(p)', link(p), 'vert num', vert(p/4)
+! enddo
 end subroutine linkoper
 !-----------------------!
 
 !=========================!
-subroutine updloop_t_worm(passed)
+subroutine updloop_t_worm(passed,num_run,num_step)
 !=========================!
 
 !changes in the configuration is achieved with the loop update, when we traversed the linked list
@@ -214,6 +229,7 @@ subroutine updloop_t_worm(passed)
 
 use blink; use hyzer; implicit none
 
+integer :: num_run, num_step
 integer :: i
 integer :: j,p1,n4
 integer :: vx,vx0,nv,ml,instate_aft_flip, outstate_aft_flip,new_vx
@@ -226,7 +242,8 @@ integer :: init_st, bef_init_st, init_p, bef_init_p
 n4=4*nh
 ml=100*l 
 nv=0
-do i=1,nl
+do i=1,nl_t
+    nv=0
     ! since T+ or T- only acts on states 1 (-), 2 (0), 3 (+), find an instate that isnt 0
     init_st = 0
     vx0 = -1
@@ -237,13 +254,16 @@ do i=1,nl
         ic0=mod(init_p,4) !get an in leg number (between 0 to 3)
         init_st=vxleg(ic0,vx0) !get the site state of that leg, 0 to 3
     enddo
-
+    
     !calc the site linked to initial site to track discontinuity
     bef_init_p = link(init_p)
     vx = vert(bef_init_p/4)
     ic = mod(bef_init_p,4)
     bef_init_st = vxleg(ic,vx)
     p1 = init_p
+
+    ! write(*,*)'init p', init_p, 'init vert num', vx0, 'init st', init_st, 'init leg', ic0
+    ! write(*,*)'bef_p', bef_init_p, 'bef vx', vx, 'bef st', bef_init_st, 'bef leg', ic
 
     do j=1,ml
         vp=p1/4
@@ -267,12 +287,17 @@ do i=1,nl
             instate_aft_flip = outstate_aft_flip
         endif
 
+        !write(*,*)'vx', vx, 'in leg', ic, 'is', is, 'is_aft_flip', instate_aft_flip
+
         if (p1 == init_p) then !if u are entering on the same
             !leg as the initial leg on the same vertex, then you must update state of initial leg
             init_st = instate_aft_flip
+            ! write(*,*)'init st changed to', instate_aft_flip
         elseif (p1 == bef_init_p) then !if u entering on state before initial leg also update
             bef_init_st = instate_aft_flip
+            ! write(*,*) 'bef init st changed to', bef_init_st
         endif
+
 
         r=rndm()
         do oc=0,3
@@ -283,7 +308,11 @@ do i=1,nl
                 exit !if found a satisfactory out leg, exit this do loop
             endif
         enddo
-        if (oc==4) write(*,*)'error, oc is 4!!'
+        if (oc==4) then
+            write(30,*)"num run", num_run, "mcstep", num_step, "t worm"
+            write(30,*)'error, oc is 4!!'
+        endif
+
 
         p1=4*vp+oc
         if (p1 == init_p) then 
@@ -293,52 +322,30 @@ do i=1,nl
         endif
         nv=nv+1
 
-        if (((p1==init_p) .and. (init_st == bef_init_st)) .or. ((p1==bef_init_p) .and. (init_st == bef_init_st))) goto 20 !if the discontinuity closes, then exit
+        !write(*,*)'out leg', oc, 'outstate', outstate_aft_flip, 'new_vx', new_vx, 'new p', p1
+
+        if (((p1==init_p) .and. (init_st == bef_init_st)) .or. ((p1==bef_init_p) .and. (init_st == bef_init_st))) then
+            !write(*,*)'exit condition triggered'
+            !write(*,*)
+            goto 20 !if the discontinuity closes, then exit
+        endif
         p1=link(p1) !traverse the linked list to the next leg that is linked
+        !write(*,*)
+        !write(*,*)'going to', p1
     enddo
     passed=.false.
     return
-20  lopers=lopers+dble(nv)
+20  lopers_t=lopers_t+dble(nv)
 enddo
 
-! j=0
-! do i=1,l !after loop update is done, update the gstring to reflect the change in operators
-!     if (gstring(i) /= 0) then
-!         gstring(i)=6*(gstring(i)/6)+vxoper(vert(j)) !here you can see that gstring(i) mod 6 gives the operator number (0-5)
-!         j=j+1 !this is going over all the operators in the propagation we labelled earlier, 1,2,3....
-!     endif
-! enddo
-
-! do i=1,nn
-!     if (frst(i) /= -1) then
-!         ic=mod(frst(i),2) !this step gets the in-leg index (0-1)
-!         vp=frst(i)/4 !gets the index of the operator (1,2,3....) if you look at how i0 and ii scales, this works
-!         st(i)=vxleg(ic,vert(vp)) !i think this doesnt change the value at st(i) at all..?
-!         if ((st(i) .ne. 0) .and. (st(i) .ne. 1) .and. (st(i) .ne. 2) .and. (st(i) .ne. 3)) then
-!             write(*,*)'wrong state, i:',i,'ic', ic,'vp',vp,'vert(vp)', vert(vp),'st(i)', st(i)
-!         endif
-!     else
-!         r = rndm()
-!         if (r.le.0.25) then
-!             st(i) = 0
-!         else if (r.le.0.5) then
-!             st(i) = 1
-!         else if (r.le.0.75) then
-!             st(i) = 2
-!         else
-!             st(i) = 3
-!         endif
-!     endif
-! enddo
-
-nloops=nloops+dble(nl)
+nloops_t=nloops_t+dble(nl_t)
 passed=.true.
 
 end subroutine updloop_t_worm
 !====================================!
 
 !=========================!
-subroutine updloop_d_worm(passed)
+subroutine updloop_d_worm(passed,num_run,num_step)
 !=========================!
 
 !changes in the configuration is achieved with the loop update, when we traversed the linked list
@@ -347,6 +354,7 @@ subroutine updloop_d_worm(passed)
 
 use blink; use hyzer; implicit none
 
+integer :: num_run, num_step
 integer :: i
 integer :: j,p1,n4
 integer :: vx,vx0,nv,ml,instate_aft_flip, outstate_aft_flip,new_vx
@@ -359,7 +367,8 @@ integer :: init_st, bef_init_st, init_p, bef_init_p
 n4=4*nh
 ml=100*l 
 nv=0
-do i=1,nl
+do i=1,nl_d
+    nv = 0
     !Dz, D+ D- collectively can act on all states
     vx0 = -1
     do while (vx0 == -1)
@@ -376,6 +385,9 @@ do i=1,nl
     ic = mod(bef_init_p,4)
     bef_init_st = vxleg(ic,vx)
     p1 = init_p
+
+    !write(*,*)'init p', init_p, 'init vert num', vx0, 'init st', init_st, 'init leg', ic0
+    !write(*,*)'bef_p', bef_init_p, 'bef vx', vx, 'bef st', bef_init_st, 'bef leg', ic
 
     do j=1,ml
         vp=p1/4
@@ -404,11 +416,15 @@ do i=1,nl
             instate_aft_flip = outstate_aft_flip
         endif
 
+        !write(*,*)'vx', vx, 'in leg', ic, 'is', is, 'is_aft_flip', instate_aft_flip
+
         if (p1 == init_p) then !if u are entering on the same
             !leg as the initial leg on the same vertex, then you must update state of initial leg
             init_st = instate_aft_flip
+            !write(*,*)'init st changed to', instate_aft_flip
         elseif (p1 == bef_init_p) then !if u entering on state before initial leg also update
             bef_init_st = instate_aft_flip
+            !write(*,*) 'bef init st changed to', bef_init_st
         endif
 
         r=rndm()
@@ -420,22 +436,35 @@ do i=1,nl
                 exit !if found a satisfactory out leg, exit this do loop
             endif
         enddo
-        if (oc==4) write(*,*)'error, oc is 4!!'
+        if (oc==4) then
+            write(30,*)"num run", num_run, "mcstep", num_step, "d worm"
+            write(30,*)'error, oc is 4!!'
+        endif
 
         p1=4*vp+oc
         if (p1 == init_p) then 
             init_st = outstate_aft_flip
+            !write(*,*)'init st changed to', outstate_aft_flip
         elseif (p1 == bef_init_p) then 
             bef_init_st = outstate_aft_flip
+            !write(*,*) 'bef init st changed to', outstate_aft_flip
         endif
-        nv=nv+1
 
-        if (((p1==init_p) .and. (init_st == bef_init_st)) .or. ((p1==bef_init_p) .and. (init_st == bef_init_st))) goto 20 !if the discontinuity closes, then exit
+        nv=nv+1
+        !write(*,*)'out leg', oc, 'outstate', outstate_aft_flip, 'new_vx', new_vx, 'new p', p1
+
+        if (((p1==init_p) .and. (init_st == bef_init_st)) .or. ((p1==bef_init_p) .and. (init_st == bef_init_st))) then
+            !write(*,*)'exit condition triggered'
+            !write(*,*)
+            goto 20 !if the discontinuity closes, then exit
+        endif
         p1=link(p1) !traverse the linked list to the next leg that is linked
+        !write(*,*)
+        !write(*,*)'going to', p1
     enddo
     passed=.false.
     return
-20  lopers=lopers+dble(nv)
+20  lopers_d=lopers_d+dble(nv)
 enddo
 
 !update of gstring only done after dworm, since u only update after both tworm and dworm is called
@@ -470,29 +499,50 @@ do i=1,nn
     endif
 enddo
 
-nloops=nloops+dble(nl)
+nloops_d=nloops_d+dble(nl_d)
 passed=.true.
 
 end subroutine updloop_d_worm
 !====================================!
 
 !================!
-subroutine adjnl
+subroutine adjnl_t
 !================!
 use hyzer; implicit none
 
 integer :: nl1
 
-lopers=lopers/nloops
+lopers_t=lopers_t/nloops_t
 
-nl1=1+int(dble(2*l)/lopers)
-nl=(nl+nl1)/2
-lopers=0.d0
-nloops=0.d0
-if (nl<0) then
-    write(*,*)'nl is negative'
+nl1=1+int(dble(2*l)/lopers_t)
+nl_t=(nl_t+nl1)/2
+lopers_t=0.d0
+nloops_t=0.d0
+if (nl_t<0) then
+    write(*,*)'nl_t is negative'
     stop
 endif
 
-end subroutine adjnl
+end subroutine adjnl_t
+!===================!
+
+!================!
+subroutine adjnl_d
+!================!
+use hyzer; implicit none
+
+integer :: nl1
+
+lopers_d=lopers_d/nloops_d
+
+nl1=1+int(dble(2*l)/lopers_d)
+nl_d=(nl_d+nl1)/2
+lopers_d=0.d0
+nloops_d=0.d0
+if (nl_d<0) then
+    write(*,*)'nl_d is negative'
+    stop
+endif
+
+end subroutine adjnl_d
 !===================!

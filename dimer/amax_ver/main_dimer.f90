@@ -84,8 +84,6 @@ end program main
 !==========================!
 subroutine writeres (nmsr)
 !==========================!
-
-!use bmsr; 
 use hyzer;
 
 implicit none
@@ -93,7 +91,8 @@ implicit none
 integer :: nmsr
 
 en = - num_op_tot/(dble(nmsr)*dble(beta)) !energy = <n>/beta = n/(nmsr*beta)
-en = en - ( 0.5*(j1+j2)* dble(nb) )!minus away 1/2(j1+j2)*nb, the diagonal shift
+en = en + (amax *dble(nb))
+!en = en - ( 0.5*(j1+j2)* dble(nb) )!minus away 1/2(j1+j2)*nb, the diagonal shift
 en = en/dble(nn) !energy PER dimer
 
 ! umag=umag/dble(nmsr)
@@ -176,6 +175,9 @@ do i=1,nn
         write(20,*)
     endif
 enddo
+! mn=no/dble(nn)
+! write(20,*)"Average density:",mn
+! write(20,*)"----------------------------------------"
 
 end subroutine writeconf
 !========================!

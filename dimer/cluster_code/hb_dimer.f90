@@ -15,13 +15,16 @@ if (istep.ne.0) then
     open(12,file='log.txt',status='unknown',access='append')
     write(12,*)'Starting equilibration.'
     close(12)
-    lopers=0.d0
-    nloops=0.d0
+    lopers_t=0.d0
+    lopers_d=0.d0
+    nloops_t=0.d0
+    nloops_d=0.d0
     do i=1,istep
-        call mcstep(0)
+        call mcstep(0,-1,i)
         call adjstl
         if (mod(i,istep/20).eq.0) then 
-            call adjnl
+            call adjnl_t
+            call adjnl_d
         endif
     enddo
     open(12,file='log.txt',status='unknown',access='append')
@@ -35,13 +38,13 @@ do i=1,nruns
     close(12)
     call zerodata
     do j=1,mstep
-        call mcstep(1)
+        call mcstep(1,i,j)
     enddo
     call writeres(mstep)
     open(12,file='log.txt',status='unknown',access='append')
     write(12,*)'Completed run ',i
     close(12)
-    open(UNIT=20,FILE='conf',STATUS='unknown',access='append')
+    open(UNIT=20,FILE='conf.txt',STATUS='unknown',access='append')
     write(20,*)"Run",i,"conf: "
     call writeconf
     close(20)
@@ -60,6 +63,7 @@ subroutine zerodata
 use hyzer; implicit none
 
 en = 0.d0
+num_op_tot = 0
 ! avu=0.d0
 ! avk=0.d0
 ! avp=0.d0
@@ -104,6 +108,7 @@ do i=l+1,l1
     gstring(i)=0
 enddo
 deallocate(tstring)
+
 r=dble(nh)/dble(l1)
 do i=l1,1,-1
     if(gstring(i) /= 0) then
@@ -134,7 +139,7 @@ deallocate(vert)
 deallocate(link)
 
 allocate(vert(0:l-1))
-allocate(link(0:8*l-1))
+allocate(link(0:4*l-1))
 
 end subroutine adjstl
 !=======================!
@@ -253,13 +258,13 @@ do iq=0,max_bond_num
     s2=mod(iiq,4); iiq=iiq/4
     diag_weight = 0.5*(j1+j2)*tdz_wgt(s1)*tdz_wgt(s2) !only for the diagonal elemets which is Tdz Tdz
     wgt(iq)= diag_weight
-    !if (wgt(iq).gt.amax) amax=wgt(iq) !set a maximum weight
+    if (wgt(iq).gt.amax) amax=wgt(iq) !set a maximum weight
 enddo
 
 !shift by 1/2(j1+j2) to make certain diagonal vertices zero???
-wgt(:) = wgt(:) + 0.5 * (j1+j2)
+!wgt(:) = wgt(:) + 0.5 * (j1+j2)
 do iq=0,max_bond_num
-    !awgt(iq)=amax-wgt(iq)
+    awgt(iq)=amax-wgt(iq)
     if (wgt(iq).gt.1.d-6) then
         dwgt(iq)=1.0/wgt(iq)
     else
@@ -267,7 +272,7 @@ do iq=0,max_bond_num
     endif
 enddo
 
-awgt(:) = wgt(:)
+!awgt(:) = wgt(:)
 
 end subroutine pvect0
 !======================!
@@ -296,7 +301,7 @@ nvx=0
 !=========================================!
 opnum = 0
 do iq = 0, max_bond_num
-    if (wgt(iq) /= 0.d0) then
+    if (awgt(iq) /= 0.d0) then
         ns(0:3) = 0
         iiq=iq
         do i=0,1
@@ -314,7 +319,7 @@ do iq = 0, max_bond_num
         do k = 0,3
             vxleg(k,nvx) = ns(k)
         enddo
-        vx_matrix_ele(iiv) = wgt(iq) !for diagonals
+        vx_matrix_ele(iiv) = awgt(iq) !for diagonals
     endif
 enddo
 
@@ -351,7 +356,7 @@ do iq=0,max_bond_num
         do k = 0,3
             vxleg(k,nvx) = ns(k)
         enddo
-        vx_matrix_ele(iiv) = 0.5*(j1+j2)*2.d0 !weight of T+T- matrix ele 
+        vx_matrix_ele(iiv) = 0.5*(j1+j2)!weight of T+T- matrix ele 
     endif
 
     if (act_tdm(ns(0)) /= -1 .and. act_tdp(ns(1)) /= -1) then !if it is TmTp
@@ -375,7 +380,7 @@ do iq=0,max_bond_num
         do k = 0,3
             vxleg(k,nvx) = ns(k)
         enddo
-        vx_matrix_ele(iiv) = 0.5*(j1+j2)*2.d0 !weight of T+T- matrix ele 
+        vx_matrix_ele(iiv) = 0.5*(j1+j2) !weight of T-T+ matrix ele 
     endif
 enddo
 
@@ -411,7 +416,7 @@ do iq=0,max_bond_num
         do k = 0,3
             vxleg(k,nvx) = ns(k)
         enddo
-        vx_matrix_ele(iiv) = 0.5*ABS(j1-j2)*1.d0 !weight of TzDz matrix ele (CHECK IF GOT MINUS SIGN)
+        vx_matrix_ele(iiv) = 0.5*ABS(j1-j2)!weight of TzDz matrix ele (CHECK IF GOT MINUS SIGN)
     endif
 
     if (act_tdp(ns(0)) /= -1 .and. act_ddm(ns(1)) /= -1) then
@@ -434,7 +439,7 @@ do iq=0,max_bond_num
         do k = 0,3
             vxleg(k,nvx) = ns(k)
         enddo
-        vx_matrix_ele(iiv) = 0.5*ABS(j1-j2)*2.d0 !weight of T+D- matrix ele (CHECK IF GOT MINUS SIGN)
+        vx_matrix_ele(iiv) = 0.5*ABS(j1-j2) !weight of T+D- matrix ele (CHECK IF GOT MINUS SIGN)
     endif
 
     if (act_tdm(ns(0)) /= -1 .and. act_ddp(ns(1)) /= -1) then
@@ -457,7 +462,7 @@ do iq=0,max_bond_num
         do k = 0,3
             vxleg(k,nvx) = ns(k)
         enddo
-        vx_matrix_ele(iiv) = 0.5*ABS(j1-j2)*2.d0 !weight of T-D+ matrix ele (CHECK IF GOT MINUS SIGN)
+        vx_matrix_ele(iiv) = 0.5*ABS(j1-j2) !weight of T-D+ matrix ele (CHECK IF GOT MINUS SIGN)
     endif
 enddo
 
