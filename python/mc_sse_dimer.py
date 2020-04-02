@@ -307,7 +307,6 @@ class mc_sse_dimer:
         self.d_worm_prob[:,:,:,:] = 0
         self.vx_new[:,:,:,:] = 0
 
-
         for i in range(1,self.nvx+1):
             iq = self.int_from_vx_num[i]
             for k in range(4):
@@ -483,5 +482,3 @@ class mc_sse_dimer:
                             self.t_worm_prob[ic,oc,instate,i] = -1
                         if self.d_worm_prob[ic,oc,instate,i] < 1e-6:
                             self.d_worm_prob[ic,oc,instate,i] = -1
-                        
-        
