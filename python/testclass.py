@@ -5,12 +5,12 @@ class lul:
 
     def __init__(self):
         self.lol = self.TOT
-        self.printy()
     
     def printy(self):
-        print(self.lol, self.lolol)
+        print(self.TOT)
 
 if __name__ == "__main__":
 
     x = lul()
-    #x.printy()
+    x.TOT = 20
+    x.printy()

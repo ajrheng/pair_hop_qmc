@@ -2,6 +2,15 @@ import numpy as np
 import random
 import time
 
+def get_num_from_ns(ns):
+    """
+    given a len 4 array of states return the 4-bit num representation
+    """
+    num = 0
+    for i in range(4):
+        num += ns[i]*(4**i)
+    return num
+
 class mc_sse_dimer:
 
     #constants in the class that won't change
@@ -33,19 +42,21 @@ class mc_sse_dimer:
     ns_to_iq = np.zeros((4,4),dtype=np.int64)
     iq_to_ns = np.zeros((2,MAX_BOND_NUM),dtype=np.int64)
 
-    tdp_wgt = np.zeros(4,dtype=np.float64)
-    tdm_wgt = np.zeros(4,dtype=np.float64)
-    tdz_wgt = np.zeros(4,dtype=np.float64)
-    ddp_wgt = np.zeros(4,dtype=np.float64)
-    ddm_wgt = np.zeros(4,dtype=np.float64)
-    ddz_wgt = np.zeros(4,dtype=np.float64)
+    tp_wgt = np.zeros(4,dtype=np.float64)
+    tm_wgt = np.zeros(4,dtype=np.float64)
+    tz_wgt = np.zeros(4,dtype=np.float64)
+    dp_wgt = np.zeros(4,dtype=np.float64)
+    dm_wgt = np.zeros(4,dtype=np.float64)
+    dz_wgt = np.zeros(4,dtype=np.float64)
 
-    act_tdp = np.zeros(4,dtype=np.int64); act_tdp[:] = -1
-    act_tdm = np.zeros(4,dtype=np.int64); act_tdm[:] = -1
-    act_tdz = np.zeros(4,dtype=np.int64); act_tdz[:] = -1
-    act_ddp = np.zeros(4,dtype=np.int64); act_ddp[:] = -1
-    act_ddm = np.zeros(4,dtype=np.int64); act_ddm[:] = -1
-    act_ddz = np.zeros(4,dtype=np.int64); act_ddz[:] = -1
+    act_tp = np.zeros(4,dtype=np.int64); act_tdp[:] = -1
+    act_tm = np.zeros(4,dtype=np.int64); act_tdm[:] = -1
+    act_tz = np.zeros(4,dtype=np.int64); act_tdz[:] = -1
+    act_dp = np.zeros(4,dtype=np.int64); act_ddp[:] = -1
+    act_dm = np.zeros(4,dtype=np.int64); act_ddm[:] = -1
+    act_dz = np.zeros(4,dtype=np.int64); act_ddz[:] = -1
+
+    nvx = 0 #counter for num of vertices
 
     def __init__(self,j1,j2,beta,nx):
 
@@ -107,41 +118,39 @@ class mc_sse_dimer:
             self.iq_to_ns[0,iq] = ns0
             self.iq_to_ns[1,iq] = ns1
 
-
     def init_matrix_ele(self):
        
-       self.ddz_wgt[0] = 1
-       self.ddp_wgt[0] = np.sqrt(2)
-       self.ddm_wgt[0] = np.sqrt(2)
+       self.dz_wgt[0] = 1
+       self.dp_wgt[0] = np.sqrt(2)
+       self.dm_wgt[0] = np.sqrt(2)
 
-       self.tdz_wgt[1] = -1
-       self.tdp_wgt[1] = np.sqrt(2)
-       self.ddp_wgt[1] = np.sqrt(2)
+       self.tz_wgt[1] = -1
+       self.tp_wgt[1] = np.sqrt(2)
+       self.dp_wgt[1] = np.sqrt(2)
 
-       self.tdp_wgt[2] = np.sqrt(2)
-       self.tdm_wgt[2] = np.sqrt(2)
-       self.ddz_wgt[2] = 1
+       self.tp_wgt[2] = np.sqrt(2)
+       self.tm_wgt[2] = np.sqrt(2)
+       self.dz_wgt[2] = 1
 
-       self.tdz_wgt[3] = 1
-       self.tdm_wgt[3] = np.sqrt(2)
-       self.ddm_wgt[3] = np.sqrt(2)
+       self.tz_wgt[3] = 1
+       self.tm_wgt[3] = np.sqrt(2)
+       self.dm_wgt[3] = np.sqrt(2)
 
-       self.act_ddz[0] = 2
-       self.act_ddp[0] = 3
-       self.act_ddm[0] = 1
+       self.act_dz[0] = 2
+       self.act_dp[0] = 3
+       self.act_dm[0] = 1
 
-       self.act_tdz[1] = 1
-       self.act_tdp[1] = 2
-       self.act_ddp[1] = 0
+       self.act_tz[1] = 1
+       self.act_tp[1] = 2
+       self.act_dp[1] = 0
 
-       self.act_tdp[2] = 3
-       self.act_tdm[2] = 1
-       self.act_ddz[2] = 0
+       self.act_tp[2] = 3
+       self.act_tm[2] = 1
+       self.act_dz[2] = 0
 
-       self.act_tdz[3] = 3
-       self.act_tdm[3] = 2
-       self.act_ddm[3] = 0
-
+       self.act_tz[3] = 3
+       self.act_tm[3] = 2
+       self.act_dm[3] = 0
 
     def pvect0(self):
 
@@ -162,4 +171,151 @@ class mc_sse_dimer:
             else:
                 self.dwgt[iq] = 1e6 
 
+    def vxweight(self):
 
+        self.vx_num_from_int[:] = -1
+        self.vx_leg[:,:] = -1
+        self.vx_num_aft_op[:,:] = -1
+        self.nvx = 0
+        ns = np.zeros(4,dtype=np.int64)
+
+        #diagonal vertices
+        opnum = 0
+        for iq in range(self.MAX_BOND_NUM):
+            ns[0] = ns[2] = self.iq_to_ns[0,iq]
+            ns[1] = ns[3] = self.iq_to_ns[1,iq]
+            iiv = get_num_from_ns(ns)
+            self.nvx += 1
+            self.vx_num_from_int[iiv] = self.nvx
+            self.int_from_vx_num[self.nvx] = iiv
+            self.op[opnum,iq] = iq
+            self.oper_from_vx_num[self.nvx] = opnum
+            self.vx_num_aft_op[opnum,iq] = self.nvx
+            for i in range(4):
+                self.vx_leg[i,self.nvx] = ns[i]
+            self.vx_matrix_ele[iiv] = self.awgt[iq]
+
+        for iq in range(self.MAX_BOND_NUM):
+            ns[:] = 0
+            ns[0] = self.iq_to_ns[0,iq]
+            ns[1] = self.iq_to_ns[1,iq]
+
+            if (self.act_tp[ns[0]] != -1 and self.act_tm[ns[1]]!= -1):
+                #T+ T- 
+                opnum = 1
+                ns[2] = self.act_tp[ns[0]]
+                ns[3] = self.act_tm[ns[1]]
+                iiv = get_num_from_ns(ns)
+                self.nvx += 1
+                jq = 0
+                for i in range(2):
+                    jq += ns[i+2]*(4**i)
+                self.vx_num_from_int[iiv] = self.nvx
+                self.int_from_vx_num[self.nvx] = iiv
+                self.op[opnum,iq] = jq
+                self.oper_from_vx_num[self.nvx] = opnum
+                self.vx_num_aft_op[opnum,iq] = self.nvx
+                for i in range(4):
+                    self.vx_leg[i,self.nvx] = ns[i]
+                self.vx_matrix_ele[iiv] = 0.5*(j1+j2)
+
+            if (self.act_tm[ns[0]] != -1 and self.act_tp[ns[1]]!= -1):
+                #T- T+ 
+                opnum = 2
+                ns[2] = self.act_tm[ns[0]]
+                ns[3] = self.act_tp[ns[1]]
+                iiv = get_num_from_ns(ns)
+                self.nvx += 1
+                jq = 0
+                for i in range(2):
+                    jq += ns[i+2]*(4**i)
+                self.vx_num_from_int[iiv] = self.nvx
+                self.int_from_vx_num[self.nvx] = iiv
+                self.op[opnum,iq] = jq
+                self.oper_from_vx_num[self.nvx] = opnum
+                self.vx_num_aft_op[opnum,iq] = self.nvx
+                for i in range(4):
+                    self.vx_leg[i,self.nvx] = ns[i]
+                self.vx_matrix_ele[iiv] = 0.5*(j1+j2)
+
+        for iq in range(self.MAX_BOND_NUM):
+            ns[:] = 0
+            ns[0] = self.iq_to_ns[0,iq]
+            ns[1] = self.iq_to_ns[1,iq]
+
+            if (self.act_tz[ns[0]] != -1 and self.act_dz[ns[1]]!= -1):
+                #Tz Dz
+                opnum = 3
+                ns[2] = self.act_tz[ns[0]]
+                ns[3] = self.act_dz[ns[1]]
+                iiv = get_num_from_ns(ns)
+                self.nvx += 1
+                jq = 0
+                for i in range(2):
+                    jq += ns[i+2]*(4**i)
+                self.vx_num_from_int[iiv] = self.nvx
+                self.int_from_vx_num[self.nvx] = iiv
+                self.op[opnum,iq] = jq
+                self.oper_from_vx_num[self.nvx] = opnum
+                self.vx_num_aft_op[opnum,iq] = self.nvx
+                for i in range(4):
+                    self.vx_leg[i,self.nvx] = ns[i]
+                self.vx_matrix_ele[iiv] = 0.5*abs(j1-j2)
+
+            if (self.act_tp[ns[0]] != -1 and self.act_dm[ns[1]]!= -1):
+                #T+ D-
+                opnum = 4
+                ns[2] = self.act_tp[ns[0]]
+                ns[3] = self.act_dm[ns[1]]
+                iiv = get_num_from_ns(ns)
+                self.nvx += 1
+                jq = 0
+                for i in range(2):
+                    jq += ns[i+2]*(4**i)
+                self.vx_num_from_int[iiv] = self.nvx
+                self.int_from_vx_num[self.nvx] = iiv
+                self.op[opnum,iq] = jq
+                self.oper_from_vx_num[self.nvx] = opnum
+                self.vx_num_aft_op[opnum,iq] = self.nvx
+                for i in range(4):
+                    self.vx_leg[i,self.nvx] = ns[i]
+                self.vx_matrix_ele[iiv] = 0.5*abs(j1-j2)
+
+            if (self.act_tm[ns[0]] != -1 and self.act_dp[ns[1]]!= -1):
+                #T- D+
+                opnum = 5
+                ns[2] = self.act_tm[ns[0]]
+                ns[3] = self.act_dp[ns[1]]
+                iiv = get_num_from_ns(ns)
+                self.nvx += 1
+                jq = 0
+                for i in range(2):
+                    jq += ns[i+2]*(4**i)
+                self.vx_num_from_int[iiv] = self.nvx
+                self.int_from_vx_num[self.nvx] = iiv
+                self.op[opnum,iq] = jq
+                self.oper_from_vx_num[self.nvx] = opnum
+                self.vx_num_aft_op[opnum,iq] = self.nvx
+                for i in range(4):
+                    self.vx_leg[i,self.nvx] = ns[i]
+                self.vx_matrix_ele[iiv] = 0.5*abs(j1-j2)
+
+    def initvrtx(self):
+        ns = np.zeros(4,dtype=np.int64)
+        self.t_worm_prob[:,:,:,:] = 0
+        self.d_worm_prob[:,:,:,:] = 0
+        self.vx_new[:,:,:,:] = 0
+
+
+        for i in range(1,nvx+1):
+            iq = self.int_from_vx_num[i]
+            ns[0] = self.iq_to_ns[0,iq]
+            ns[1] = self.iq_to_ns[1,iq]
+            ns[2] = self.iq_to_ns[2,iq]
+            ns[3] = self.iq_to_ns[3,iq]
+
+        for ic in range(4):
+            instate = ns[ic]
+            #====================== START OF T+ T- WORM============================#
+            ns1[:] = np.copy(ns)
+            
