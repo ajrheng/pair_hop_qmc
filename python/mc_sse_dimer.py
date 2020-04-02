@@ -49,12 +49,12 @@ class mc_sse_dimer:
     dm_wgt = np.zeros(4,dtype=np.float64)
     dz_wgt = np.zeros(4,dtype=np.float64)
 
-    act_tp = np.zeros(4,dtype=np.int64); act_tdp[:] = -1
-    act_tm = np.zeros(4,dtype=np.int64); act_tdm[:] = -1
-    act_tz = np.zeros(4,dtype=np.int64); act_tdz[:] = -1
-    act_dp = np.zeros(4,dtype=np.int64); act_ddp[:] = -1
-    act_dm = np.zeros(4,dtype=np.int64); act_ddm[:] = -1
-    act_dz = np.zeros(4,dtype=np.int64); act_ddz[:] = -1
+    act_tp = np.zeros(4,dtype=np.int64); act_tp[:] = -1
+    act_tm = np.zeros(4,dtype=np.int64); act_tm[:] = -1
+    act_tz = np.zeros(4,dtype=np.int64); act_tz[:] = -1
+    act_dp = np.zeros(4,dtype=np.int64); act_dp[:] = -1
+    act_dm = np.zeros(4,dtype=np.int64); act_dm[:] = -1
+    act_dz = np.zeros(4,dtype=np.int64); act_dz[:] = -1
 
     nvx = 0 #counter for num of vertices
 
@@ -72,10 +72,10 @@ class mc_sse_dimer:
         self.nb = 2 * self.nn
 
         # arrays that depend on lattice size, hence put into constructor
-        state = np.zeros(self.nn,dtype=np.int8) #create 1D array
-        cords_of_site = np.zeros((2,self.nn),dtype=np.int64) #given site number, what is the coordinates 
-        site_of_cords = np.zeros((self.nx,self.ny),dtype=np.int64) #given coordinates, what is the site number 
-        bond = np.zeros((2,self.nb),dtype=np.int64)
+        self.state = np.zeros(self.nn,dtype=np.int8) #create 1D array
+        self.cords_of_site = np.zeros((2,self.nn),dtype=np.int64) #given site number, what is the coordinates 
+        self.site_of_cords = np.zeros((self.nx,self.ny),dtype=np.int64) #given coordinates, what is the site number 
+        self.bond = np.zeros((2,self.nb),dtype=np.int64)
 
         np.random.seed(int(time.time())) #set random seed when constructor called
 
@@ -112,8 +112,8 @@ class mc_sse_dimer:
 
         for iq in range(self.MAX_BOND_NUM):
             iiq = iq
-            ns0 = iiq % 2; iiq = iiq // 2
-            ns1 = iiq % 2; iiq = iiq // 2
+            ns0 = iiq % 4; iiq = iiq // 4
+            ns1 = iiq % 4; iiq = iiq // 4
             self.ns_to_iq[ns0,ns1] = iq
             self.iq_to_ns[0,iq] = ns0
             self.iq_to_ns[1,iq] = ns1
@@ -157,13 +157,13 @@ class mc_sse_dimer:
         for iq in range(self.MAX_BOND_NUM):
             s1 = self.iq_to_ns[0,iq]
             s2 = self.iq_to_ns[1,iq]
-            self.wgt[iq] = 0.5 * (self.j1 + self.j2) * self.tdz_wgt[s1] * self.tdz_wgt[s2]            
+            self.wgt[iq] = 0.5 * (self.j1 + self.j2) * self.tz_wgt[s1] * self.tz_wgt[s2]         
             # if self.wgt[iq] > max_wgt:
             #     max_wgt = self.wgt[iq]
 
         # max_wgt = max_wgt + 1
-        wgt = np.add(wgt,0.5*(self.j1+self.j2))
-        awgt[:] = wgt[:]
+        self.wgt = np.add(self.wgt,0.5*(self.j1+self.j2))
+        self.awgt[:] = self.wgt[:]
 
         for iq in range(self.MAX_BOND_NUM):
             if self.awgt[iq] > 1e-6:
@@ -182,18 +182,19 @@ class mc_sse_dimer:
         #diagonal vertices
         opnum = 0
         for iq in range(self.MAX_BOND_NUM):
-            ns[0] = ns[2] = self.iq_to_ns[0,iq]
-            ns[1] = ns[3] = self.iq_to_ns[1,iq]
-            iiv = get_num_from_ns(ns)
-            self.nvx += 1
-            self.vx_num_from_int[iiv] = self.nvx
-            self.int_from_vx_num[self.nvx] = iiv
-            self.op[opnum,iq] = iq
-            self.oper_from_vx_num[self.nvx] = opnum
-            self.vx_num_aft_op[opnum,iq] = self.nvx
-            for i in range(4):
-                self.vx_leg[i,self.nvx] = ns[i]
-            self.vx_matrix_ele[iiv] = self.awgt[iq]
+            if self.awgt[iq] != 0:
+                ns[0] = ns[2] = self.iq_to_ns[0,iq]
+                ns[1] = ns[3] = self.iq_to_ns[1,iq]
+                iiv = get_num_from_ns(ns)
+                self.nvx += 1
+                self.vx_num_from_int[iiv] = self.nvx
+                self.int_from_vx_num[self.nvx] = iiv
+                self.op[opnum,iq] = iq
+                self.oper_from_vx_num[self.nvx] = opnum
+                self.vx_num_aft_op[opnum,iq] = self.nvx
+                for i in range(4):
+                    self.vx_leg[i,self.nvx] = ns[i]
+                self.vx_matrix_ele[iiv] = self.awgt[iq]
 
         for iq in range(self.MAX_BOND_NUM):
             ns[:] = 0
@@ -217,7 +218,7 @@ class mc_sse_dimer:
                 self.vx_num_aft_op[opnum,iq] = self.nvx
                 for i in range(4):
                     self.vx_leg[i,self.nvx] = ns[i]
-                self.vx_matrix_ele[iiv] = 0.5*(j1+j2)
+                self.vx_matrix_ele[iiv] = 0.5*(self.j1+self.j2)
 
             if (self.act_tm[ns[0]] != -1 and self.act_tp[ns[1]]!= -1):
                 #T- T+ 
@@ -236,7 +237,7 @@ class mc_sse_dimer:
                 self.vx_num_aft_op[opnum,iq] = self.nvx
                 for i in range(4):
                     self.vx_leg[i,self.nvx] = ns[i]
-                self.vx_matrix_ele[iiv] = 0.5*(j1+j2)
+                self.vx_matrix_ele[iiv] = 0.5*(self.j1+self.j2)
 
         for iq in range(self.MAX_BOND_NUM):
             ns[:] = 0
@@ -260,7 +261,7 @@ class mc_sse_dimer:
                 self.vx_num_aft_op[opnum,iq] = self.nvx
                 for i in range(4):
                     self.vx_leg[i,self.nvx] = ns[i]
-                self.vx_matrix_ele[iiv] = 0.5*abs(j1-j2)
+                self.vx_matrix_ele[iiv] = 0.5*abs(self.j1-self.j2)
 
             if (self.act_tp[ns[0]] != -1 and self.act_dm[ns[1]]!= -1):
                 #T+ D-
@@ -279,7 +280,7 @@ class mc_sse_dimer:
                 self.vx_num_aft_op[opnum,iq] = self.nvx
                 for i in range(4):
                     self.vx_leg[i,self.nvx] = ns[i]
-                self.vx_matrix_ele[iiv] = 0.5*abs(j1-j2)
+                self.vx_matrix_ele[iiv] = 0.5*abs(self.j1-self.j2)
 
             if (self.act_tm[ns[0]] != -1 and self.act_dp[ns[1]]!= -1):
                 #T- D+
@@ -298,7 +299,7 @@ class mc_sse_dimer:
                 self.vx_num_aft_op[opnum,iq] = self.nvx
                 for i in range(4):
                     self.vx_leg[i,self.nvx] = ns[i]
-                self.vx_matrix_ele[iiv] = 0.5*abs(j1-j2)
+                self.vx_matrix_ele[iiv] = 0.5*abs(self.j1-self.j2)
 
     def initvrtx(self):
         ns = np.zeros(4,dtype=np.int64)
@@ -307,15 +308,180 @@ class mc_sse_dimer:
         self.vx_new[:,:,:,:] = 0
 
 
-        for i in range(1,nvx+1):
+        for i in range(1,self.nvx+1):
             iq = self.int_from_vx_num[i]
-            ns[0] = self.iq_to_ns[0,iq]
-            ns[1] = self.iq_to_ns[1,iq]
-            ns[2] = self.iq_to_ns[2,iq]
-            ns[3] = self.iq_to_ns[3,iq]
+            for k in range(4):
+                ns[k] = iq % 4; iq = iq//4
 
-        for ic in range(4):
-            instate = ns[ic]
-            #====================== START OF T+ T- WORM============================#
-            ns1[:] = np.copy(ns)
-            
+            for ic in range(4):
+                instate = ns[ic]
+                #====================== START OF T+ T- WORM============================#
+                if (self.act_tp[instate]!=-1):
+                    ns1 = np.copy(ns)
+                    ns1[ic] = self.act_tp[instate]
+
+                    for oc in range(4):
+                        ns2 = np.copy(ns1)
+                        outstate= ns2[oc]
+
+                        if (self.act_tp[outstate]!=-1):
+                            ns2[oc] = self.act_tp[outstate]
+                            iiv = get_num_from_ns(ns2)
+                            if (self.vx_num_from_int[iiv]!=-1):
+                                vertex_num = self.vx_num_from_int[iiv]
+                                self.vx_new[ic,oc,ns1[ic],i] = vertex_num
+                                self.t_worm_prob[ic,oc,ns1[ic],i] = self.vx_matrix_ele[iiv]
+
+                        if (self.act_tm[outstate]!=-1):
+                            ns2[oc] = self.act_tm[outstate]
+                            iiv = get_num_from_ns(ns2)
+                            if (self.vx_num_from_int[iiv]!=-1):
+                                vertex_num = self.vx_num_from_int[iiv]
+                                self.vx_new[ic,oc,ns1[ic],i] = vertex_num
+                                self.t_worm_prob[ic,oc,ns1[ic],i] = self.vx_matrix_ele[iiv]                        
+
+                if (self.act_tm[instate]!=-1):
+                    ns1 = np.copy(ns)
+                    ns1[ic] = self.act_tm[instate]
+
+                    for oc in range(4):
+                        ns2 = np.copy(ns1)
+                        outstate= ns2[oc]
+
+                        if (self.act_tp[outstate]!=-1):
+                            ns2[oc] = self.act_tp[outstate]
+                            iiv = get_num_from_ns(ns2)
+                            if (self.vx_num_from_int[iiv]!=-1):
+                                vertex_num = self.vx_num_from_int[iiv]
+                                self.vx_new[ic,oc,ns1[ic],i] = vertex_num
+                                self.t_worm_prob[ic,oc,ns1[ic],i] = self.vx_matrix_ele[iiv]
+
+                        if (self.act_tm[outstate]!=-1):
+                            ns2[oc] = self.act_tm[outstate]
+                            iiv = get_num_from_ns(ns2)
+                            if (self.vx_num_from_int[iiv]!=-1):
+                                vertex_num = self.vx_num_from_int[iiv]
+                                self.vx_new[ic,oc,ns1[ic],i] = vertex_num
+                                self.t_worm_prob[ic,oc,ns1[ic],i] = self.vx_matrix_ele[iiv]
+
+                #====================== START OF D+ D- Dz WORM============================#
+                if (self.act_dp[instate]!=-1):
+                    ns1 = np.copy(ns)
+                    ns1[ic] = self.act_dp[instate]
+
+                    for oc in range(4):
+                        ns2 = np.copy(ns1)
+                        outstate= ns2[oc]
+
+                        if (self.act_dp[outstate]!=-1):
+                            ns2[oc] = self.act_dp[outstate]
+                            iiv = get_num_from_ns(ns2)
+                            if (self.vx_num_from_int[iiv]!=-1):
+                                vertex_num = self.vx_num_from_int[iiv]
+                                self.vx_new[ic,oc,ns1[ic],i] = vertex_num
+                                self.d_worm_prob[ic,oc,ns1[ic],i] = self.vx_matrix_ele[iiv]
+
+                        if (self.act_dm[outstate]!=-1):
+                            ns2[oc] = self.act_dm[outstate]
+                            iiv = get_num_from_ns(ns2)
+                            if (self.vx_num_from_int[iiv]!=-1):
+                                vertex_num = self.vx_num_from_int[iiv]
+                                self.vx_new[ic,oc,ns1[ic],i] = vertex_num
+                                self.d_worm_prob[ic,oc,ns1[ic],i] = self.vx_matrix_ele[iiv]   
+
+                        if (self.act_dz[outstate]!=-1):
+                            ns2[oc] = self.act_dz[outstate]
+                            iiv = get_num_from_ns(ns2)
+                            if (self.vx_num_from_int[iiv]!=-1):
+                                vertex_num = self.vx_num_from_int[iiv]
+                                self.vx_new[ic,oc,ns1[ic],i] = vertex_num
+                                self.d_worm_prob[ic,oc,ns1[ic],i] = self.vx_matrix_ele[iiv]
+
+                if (self.act_dm[instate]!=-1):
+                    ns1 = np.copy(ns)
+                    ns1[ic] = self.act_dm[instate]
+
+                    for oc in range(4):
+                        ns2 = np.copy(ns1)
+                        outstate= ns2[oc]
+
+                        if (self.act_dp[outstate]!=-1):
+                            ns2[oc] = self.act_dp[outstate]
+                            iiv = get_num_from_ns(ns2)
+                            if (self.vx_num_from_int[iiv]!=-1):
+                                vertex_num = self.vx_num_from_int[iiv]
+                                self.vx_new[ic,oc,ns1[ic],i] = vertex_num
+                                self.d_worm_prob[ic,oc,ns1[ic],i] = self.vx_matrix_ele[iiv]
+
+                        if (self.act_dm[outstate]!=-1):
+                            ns2[oc] = self.act_dm[outstate]
+                            iiv = get_num_from_ns(ns2)
+                            if (self.vx_num_from_int[iiv]!=-1):
+                                vertex_num = self.vx_num_from_int[iiv]
+                                self.vx_new[ic,oc,ns1[ic],i] = vertex_num
+                                self.d_worm_prob[ic,oc,ns1[ic],i] = self.vx_matrix_ele[iiv]   
+
+                        if (self.act_dz[outstate]!=-1):
+                            ns2[oc] = self.act_dz[outstate]
+                            iiv = get_num_from_ns(ns2)
+                            if (self.vx_num_from_int[iiv]!=-1):
+                                vertex_num = self.vx_num_from_int[iiv]
+                                self.vx_new[ic,oc,ns1[ic],i] = vertex_num
+                                self.d_worm_prob[ic,oc,ns1[ic],i] = self.vx_matrix_ele[iiv]
+
+
+                if (self.act_dz[instate]!=-1):
+                    ns1 = np.copy(ns)
+                    ns1[ic] = self.act_dz[instate]
+
+                    for oc in range(4):
+                        ns2 = np.copy(ns1)
+                        outstate= ns2[oc]
+
+                        if (self.act_dp[outstate]!=-1):
+                            ns2[oc] = self.act_dp[outstate]
+                            iiv = get_num_from_ns(ns2)
+                            if (self.vx_num_from_int[iiv]!=-1):
+                                vertex_num = self.vx_num_from_int[iiv]
+                                self.vx_new[ic,oc,ns1[ic],i] = vertex_num
+                                self.d_worm_prob[ic,oc,ns1[ic],i] = self.vx_matrix_ele[iiv]
+
+                        if (self.act_dm[outstate]!=-1):
+                            ns2[oc] = self.act_dm[outstate]
+                            iiv = get_num_from_ns(ns2)
+                            if (self.vx_num_from_int[iiv]!=-1):
+                                vertex_num = self.vx_num_from_int[iiv]
+                                self.vx_new[ic,oc,ns1[ic],i] = vertex_num
+                                self.d_worm_prob[ic,oc,ns1[ic],i] = self.vx_matrix_ele[iiv]   
+
+                        if (self.act_dz[outstate]!=-1):
+                            ns2[oc] = self.act_dz[outstate]
+                            iiv = get_num_from_ns(ns2)
+                            if (self.vx_num_from_int[iiv]!=-1):
+                                vertex_num = self.vx_num_from_int[iiv]
+                                self.vx_new[ic,oc,ns1[ic],i] = vertex_num
+                                self.d_worm_prob[ic,oc,ns1[ic],i] = self.vx_matrix_ele[iiv]
+
+        for i in range(1,self.nvx+1):
+            for ic in range(4):
+                for instate in range(4):
+                    for oc in range(1,4):
+                        self.t_worm_prob[ic,oc,instate,i] = self.t_worm_prob[ic,oc,instate,i] + self.t_worm_prob[ic,oc-1,instate,i]
+                        self.d_worm_prob[ic,oc,instate,i] = self.d_worm_prob[ic,oc,instate,i] + self.d_worm_prob[ic,oc-1,instate,i]
+
+
+        counter = 0
+        for i in range(1,self.nvx+1):
+            for ic in range(4):
+                for instate in range(4):
+                    for oc in range(4):
+                        if (self.t_worm_prob[ic,3,instate,i]!= 0):
+                            self.t_worm_prob[ic,oc,instate,i] /= self.t_worm_prob[ic,3,instate,i]
+                        if (self.d_worm_prob[ic,3,instate,i]!= 0):
+                            self.d_worm_prob[ic,oc,instate,i] /= self.d_worm_prob[ic,3,instate,i]
+                        if self.t_worm_prob[ic,oc,instate,i] < 1e-6:
+                            self.t_worm_prob[ic,oc,instate,i] = -1
+                        if self.d_worm_prob[ic,oc,instate,i] < 1e-6:
+                            self.d_worm_prob[ic,oc,instate,i] = -1
+                        
+        

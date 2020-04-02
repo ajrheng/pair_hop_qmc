@@ -2,38 +2,46 @@
 module hyzer
 save
 
-integer, parameter :: nx=8, ny=8, nn=nx*ny, nq=nn, nb=2*nn, nn2=nn*nn
+integer, parameter :: nx=4, ny=4, nn=nx*ny, nb=2*nn, nn2=nn*nn
 real(8), parameter :: z=4.d0 ! 2*nb/nn
 
-integer,parameter :: nvx=52, ivmax=2**8 - 1
+integer,parameter :: max_bond_num = 4**2 - 1, max_vx_num=4**4 - 1, op_num = 6-1 !SIX types of opers (0:5), see vxweight
 
 integer,parameter :: ntau=100
 
-real(8) :: vv,tt,tp,mu,beta,vv2
+real(8) :: j1 = 1,j2 = 0,beta = 10
 integer :: istep,mstep,nruns,equ
 
 integer :: xy(2,nn),xy1(0:nx-1,0:ny-1)
 
-integer :: l,mloop,nh
-integer :: st(nn),nst(0:15,0:7),ctra(1:6,0:1,0:1,0:1,0:1)
-integer :: ns2iq(0:1,0:1,0:1,0:1),iq2ns(0:3,0:15)
-integer :: plqt(0:3,nq),btyp(nb),phase(nn)
-real(8) :: amax,wgt(0:15),awgt(0:15),dwgt(0:15)
+integer :: l,mloop,nh,nvx,num_op_tot !nh = num of operators in opstring, nvx = number of vertex, num_op_tot = total ops in opstring over all runs
+integer :: st(nn)
+integer :: ns2iq(0:3,0:3),iq2ns(0:1,0:max_bond_num)
+integer :: bond(0:1,nb),btyp(nb),phase(nn)
+real(8) :: amax,wgt(0:max_bond_num),awgt(0:max_bond_num),dwgt(0:max_bond_num)
 
-integer :: vxoper(nvx),vxcode(0:6,0:15),vxleg(0:7,nvx)
-integer :: vxnew(0:7,0:7,nvx),op(0:6,0:15)
-integer :: vtyp(nvx),ivx(0:ivmax),vxi(nvx)
-real(8) :: vxprb(0:7,0:7,nvx),corr(1:nn,1:nn),strFactTemp(0:nx,0:nx),strFact(0:nx,0:nx)
-!corr and strFactTemp survives between msteps, strFact writes averaged
-!strFact for whole simulation.
+integer :: vxoper(max_vx_num),vxcode(0:op_num,0:max_bond_num),vxleg(0:3,max_vx_num)
+integer :: op(0:op_num,0:max_bond_num)
+integer :: vxnew(0:3,0:3,0:3,max_vx_num) !vxnew(inleg, outleg, in_state_aft_flip, max_vx_num)
+integer :: ivx(0:max_vx_num),vxi(max_vx_num) 
+real(8) :: vxprb_t_worm(0:3,0:3,0:3,max_vx_num), vxprb_d_worm(0:3,0:3,0:3,max_vx_num) !vxprb(inleg, outleg, in_state_aft_flip ,max_vx_num)
+real(8) :: vx_matrix_ele(max_vx_num) !given the vertex_num, gives the value of the matrix ele
 
 integer, allocatable :: gstring(:)
-integer, allocatable :: vert(:),link(:)
+integer, allocatable :: link(:)
+integer, allocatable :: vert(:)
 
-integer :: nl
-real(8) :: lopers,nloops
+!wgt arrays tells you the eigenvalues of a local state after the operators acts on it. helps in calculating weights. for eg. tdp == T_d^+ operator
+!act arrays give you the value of the resulting state after action of an operator. for eg. tdp(2) = 3 because T_d^+ !0> gives you !+>.
+real(8) :: tdp_wgt(0:3), tdm_wgt(0:3), tdz_wgt(0:3), ddp_wgt(0:3), ddm_wgt(0:3), ddz_wgt(0:3)
+integer :: act_tdp(0:3), act_tdm(0:3), act_tdz(0:3), act_ddp(0:3), act_ddm(0:3), act_ddz(0:3)
+
+integer :: nl_t, nl_d
+real(8) :: lopers_t,nloops_t,lopers_d, nloops_d
 
 integer :: iir,jjr,kkr,nnr
+
+real(8):: en !energy
 
 end module hyzer
 !==============================!
@@ -44,85 +52,128 @@ subroutine lattice
 !===================!
 use hyzer; implicit none
 
-integer :: i,q,ix,iy,ix1,iy1,ix2,iy2,ix3,iy3,ix4,iy4,m,k1,k2
-integer :: iq,iiq,ns(0:3)
+integer :: i,q,ix,iy,ix1,iy1,ix2,iy2
+integer :: iq,iiq,ns(0:1)
 
 i=0
-m=0
 do iy=0,ny-1
     do ix=0,nx-1
         i=i+1
         xy(1,i)=ix !x coordinate of site number i
         xy(2,i)=iy !y coordinate of site number i
         xy1(ix,iy)=i !given coordinates ix, iy, what site number does it correspond to
-enddo
     enddo
-
-do q=1,nn !iterate through plaquette number
-    ix1=xy(1,q); iy1=xy(2,q) !get x and y coordinate of the 4 sites in a plaquette
-    ix2=mod(ix1+1,nx); iy2=iy1 ! sites on plaquette go in anti-clockwise, if you imagine normal cartesian axes
-    ix3=mod(ix1+1,nx); iy3=mod(iy1+1,ny) !the mod is to account for plaquettes wrapping around lattice, i.e PBC
-    ix4=ix1; iy4=mod(iy1+1,ny)
-    plqt(0,q)=xy1(ix1,iy1) !so site 0 of plaqeutte q is site index xy1(ix1,iy1)
-    plqt(1,q)=xy1(ix2,iy2) !etc etc
-    plqt(2,q)=xy1(ix3,iy3)
-    plqt(3,q)=xy1(ix4,iy4)
-    phase(q)=(-1)**(q+m) !this is for calculation of S(\pi,\pi) i think, not so important.
-    if (mod(q,nx)==0) then
-        m=m+1
-    endif
 enddo
 
-do iq=0,15 !there are a total of 16 possible plaquette configurations (2^4)
+q=0
+do iy=0,ny-1
+    do ix=0,nx-1
+        q = q+1
+        ix1 = ix; iy1 = iy
+        ix2 = mod(ix1+1,nx); iy2 = iy1
+        bond(0,q)= xy1(ix1,iy1) !so site 0 of bond q is site index xy1(ix1,iy1)
+        bond(1,q)= xy1(ix2,iy2) !etc etc
+    enddo
+enddo
+
+do ix=0,ny-1
+    do iy=0,nx-1
+        q = q+1
+        ix1 = ix; iy1 = iy
+        ix2 = ix1; iy2 = mod(iy1+1,ny)
+        bond(0,q)=xy1(ix1,iy1) 
+        bond(1,q)=xy1(ix2,iy2)
+    enddo
+enddo
+
+do iq=0,max_bond_num 
     iiq=iq
-    ns(0)=mod(iiq,2); iiq=iiq/2 !we store these configurations as a 4-bit number
-    ns(1)=mod(iiq,2); iiq=iiq/2 !eg. 0100 corresponds to 2, so ns2iq(0,1,0,0) = 2
-    ns(2)=mod(iiq,2); iiq=iiq/2 !iq2ns(1,2) = 1 for example.
-    ns(3)=mod(iiq,2); iiq=iiq/2
-    ns2iq(ns(0),ns(1),ns(2),ns(3))=iq
+    ns(0)=mod(iiq,4); iiq=iiq/4 !we store these configurations as a 4-bit number
+    ns(1)=mod(iiq,4); iiq=iiq/4 !eg. 7 corresponds to 3-1, so ns2iq(3,1) = 7
+    ns2iq(ns(0),ns(1))=iq
     iq2ns(0,iq)=ns(0)
     iq2ns(1,iq)=ns(1)
-    iq2ns(2,iq)=ns(2)
-    iq2ns(3,iq)=ns(3)
 enddo
-
-!intialize strFact to 0
-strFact(:,:)=0.d0
 
 end subroutine lattice
 !====================!
+!=====================!
+subroutine matrix_ele
+!=====================!
+use hyzer; implicit none
+
+tdp_wgt(:) = 0.d0; tdm_wgt(:) = 0.d0; tdz_wgt(:) = 0.d0; ddp_wgt(:) = 0.d0; ddm_wgt(:) = 0.d0; ddz_wgt(:) = 0.d0
+act_tdp(:) = -1; act_tdm(:) = -1; act_tdz(:) = -1; act_ddp(:) = -1; act_ddm(:) = -1; act_ddz(:) = -1
+
+!handle the weight of the action of each operator on a local state
+!switch all off-diagonals to positive, but keep the negative signs of the diagonals
+ddz_wgt(0) = 1.d0
+ddp_wgt(0) = SQRT(2.d0)
+ddm_wgt(0) = SQRT(2.d0)
+
+tdz_wgt(1) = -1.d0 
+tdp_wgt(1) = SQRT(2.d0)
+ddp_wgt(1) = SQRT(2.d0)
+
+tdp_wgt(2) = SQRT(2.d0)
+tdm_wgt(2) = SQRT(2.d0)
+ddz_wgt(2) = 1.d0
+
+tdz_wgt(3) = 1.d0
+tdm_wgt(3) = SQRT(2.d0)
+ddm_wgt(3) = SQRT(2.d0)
+
+!now handle the state resulting from the action of operator on state
+act_ddz(0) = 2
+act_ddp(0) = 3
+act_ddm(0) = 1
+
+act_tdz(1) = 1
+act_tdp(1) = 2
+act_ddp(1) = 0
+
+act_tdp(2) = 3
+act_tdm(2) = 1
+act_ddz(2) = 0
+
+act_tdz(3) = 3
+act_tdm(3) = 2
+act_ddm(3) = 0
+
+end subroutine matrix_ele
+!=====================!
 
 !====================!
 subroutine pvect0
 !====================!
 use hyzer; implicit none
 
-integer :: iq,iiq,s1,s2,s3,s4
+integer :: iq,iiq,s1,s2
+real(8) :: diag_weight
 
 amax=0.d0; wgt(:)=0.d0; awgt(:)=0.d0; dwgt(:)=0.d0
-vv=1; mu=1; vv2=1; tt=1 ;tp = 1
 
-do iq=0,15
+do iq=0,max_bond_num
     iiq=iq
-    s1=mod(iiq,2); iiq=iiq/2
-    s2=mod(iiq,2); iiq=iiq/2
-    s3=mod(iiq,2); iiq=iiq/2
-    s4=mod(iiq,2); iiq=iiq/2
-    wgt(iq)= vv*dble(s1*s2 + s2*s3 + s3*s4 + s4*s1) !weight of a plaquette configuration, nn-repulsion term
-    wgt(iq)= wgt(iq) + vv2*dble(s1*s3 + s2*s4) !diagonal repulsion term
-    wgt(iq)= wgt(iq) - mu*dble(s1+s2+s3+s4)/z !chemical potential term
-    if (wgt(iq).gt.amax) amax=wgt(iq) !set a maximum weight
+    s1=mod(iiq,4); iiq=iiq/4
+    s2=mod(iiq,4); iiq=iiq/4
+    diag_weight = 0.5*(j1+j2)*tdz_wgt(s1)*tdz_wgt(s2) !only for the diagonal elemets which is Tdz Tdz
+    wgt(iq)= diag_weight
+    !if (wgt(iq).gt.amax) amax=wgt(iq) !set a maximum weight
 enddo
-!the larger the wgt(iq), the more unfavourable it is, or the higher energy the configuration is
-amax=amax+1.d0
-do iq=0,15
-    awgt(iq)=amax-wgt(iq)
-    if (awgt(iq).gt.1.d-6) then
-        dwgt(iq)=1.0/awgt(iq)
+
+!shift by 1/2(j1+j2) to make certain diagonal vertices zero???
+wgt(:) = wgt(:) + 0.5 * (j1+j2)
+do iq=0,max_bond_num
+    !awgt(iq)=amax-wgt(iq)
+    if (wgt(iq).gt.1.d-6) then
+        dwgt(iq)=1.0/wgt(iq)
     else
         dwgt(iq)=1.d6
     endif
 enddo
+
+awgt(:) = wgt(:)
 
 end subroutine pvect0
 !======================!
@@ -132,256 +183,466 @@ subroutine vxweight
 !==========================!
 use hyzer; implicit none
 
-integer :: i,j,k,m,iq,jq,iiv,nv
-integer :: ns(0:7),ns1(0:7)
-real(8) :: vvsum,musum
+integer :: i,k,iq,iiv,opnum,iiq,jq
+integer :: ns(0:3)
 
-ivx(:)=-1; vxleg(:,:)=-1
-nv=0
+ivx(:)=-1; vxleg(:,:)=-1; vxcode(:,:) = -1
+nvx=0
 
 !=========================================!
-! diagonal vertices:    n3  n2   n1  n0
-!                       ===============
-!                       n3  n2   n1  n0
+! for opnum, 0 = TzTz (diagonal), 1 = TpTm, 2 = TmTp
+! 3 = TzDz, 4 = TpDm, 5 = TmDp
 !=========================================!
-do iq=0,15
-    !these are to keep track of the vertex with diagonal operators, i.e no change in the sites after action of operator
-    ns(0:7)=0
-    do i=0,3
-        if(btest(iq,i)) ns(i)=1 !returns true if the bit is 1 at position i, for the integer iq
-        ns(i+4)=ns(i) !eg. 3 = 2^0 + 2^1, so btest(3,0) and btest(3,1) are true, btest(3,2) etc. are false.
-    enddo
-    iiv=0
-    do k=0,7
-        iiv=iiv+ns(k)*(2**k) !converts the 8 site vertex to a unique integer iiv
-    enddo
-    nv=nv+1 !number the vertex from 1 onwards
-    ivx(iiv)=nv; vxi(nv)=iiv !ivx(iiv) takes a vertex integer and returns the vertex number, vxi(nv) is the reverse
-    jq=0
-    op(0,iq)=iq; vxoper(nv)=0 !op tells you when operator 0 (off-diagonal) acts on plaquette iq, result is iq
-    ! vxoper(nv) returns the operator type (0 = diagonal) for a vertex number nv
-    vxcode(0,iq)=nv !given an diagonal operator and the state of the plaquette sites before action of operator, what is the vertex number
-    do k=0,7
-        vxleg(k,nv)=ns(k) !given a vertex number nv, what is the k'th site's state
-    enddo
+
+!=========================================!
+! diagonal vertices:    n2  n3
+!                       =======
+!                       n0  n1
+!represent Tdz*Tdz term
+!=========================================!
+opnum = 0
+do iq = 0, max_bond_num
+    if (awgt(iq) /= 0.d0) then
+        ns(0:3) = 0
+        iiq=iq
+        do i=0,1
+            ns(i)=mod(iiq,4); iiq=iiq/4
+            ns(i+2) = ns(i)
+        enddo
+        iiv = 0
+        do k=0,3
+            iiv = iiv + ns(k)*(4**k)
+        enddo
+        nvx=nvx+1
+        ivx(iiv) = nvx; vxi(nvx) = iiv
+        op(opnum,iq) = iq; vxoper(nvx) = opnum  
+        vxcode(opnum,iq) = nvx
+        do k = 0,3
+            vxleg(k,nvx) = ns(k)
+        enddo
+        vx_matrix_ele(iiv) = awgt(iq) !for diagonals
+    endif
 enddo
 
-!========================================!
-! single boson hopping vertices
-!========================================!
 
-do iq=0,15
-    ns(0:7)=0
-    do i=0,3
-        if(btest(iq,i)) ns(i)=1
-        ns(i+4)=ns(i)
+!========================================!
+! Off diagonal vertices
+! this represents Td+ Td-
+!========================================!
+do iq=0,max_bond_num
+    ns(0:3) = 0
+    iiq=iq
+    do i=0,1
+        ns(i)=mod(iiq,4); iiq=iiq/4
     enddo
 
-    do i=0,3
-        ns1(:)=ns(:)
-        j=mod(i+1,4) !find the neighboring site
-        if(ns1(i)/= ns1(j)) then !if the next site is not the same as the previous site, single hop to that site
-            ns1(i+4)=1-ns(i) !flip old site.
-            ns1(j+4)=1-ns(j) !flip new site, so now boson hopped from old site to new site
+    if (act_tdp(ns(0)) /= -1 .and. act_tdm(ns(1)) /= -1) then
+        !meaning TpTm causes a valid vertex on this state
+        opnum = 1
+        !write(*,*)'iq',iq, 'ns0', ns(0), 'ns1', ns(1), 'opnum', opnum, act_tdp(ns(0)), act_tdm(ns(1))
+        ns(2) = act_tdp(ns(0))
+        ns(3) = act_tdm(ns(1))
+        iiv = 0
+        do k=0,3
+            iiv = iiv + ns(k)*(4**k)
+        enddo
+        nvx=nvx+1
+        ivx(iiv) = nvx; vxi(nvx) = iiv
+        jq=0
+        do k=0,1
+            jq=jq+ns(k+2)*(4**k) !encode the resulting vertex into an integer jq
+        enddo
+        op(opnum,iq) = jq; vxoper(nvx) = opnum  
+        vxcode(opnum,iq) = nvx
+        do k = 0,3
+            vxleg(k,nvx) = ns(k)
+        enddo
+        vx_matrix_ele(iiv) = 0.5*(j1+j2)!weight of T+T- matrix ele 
+    endif
 
-            iiv=0
-            do k=0,7
-                iiv=iiv+ns1(k)*(2**k) !this encodes it as a binary 2 bit number. 2^0 + 2^1 + ...
-            enddo
-            nv=nv+1
-            ivx(iiv)=nv; vxi(nv)=iiv
-            jq=0
-            do k=0,3
-                jq=jq+ns1(k+4)*(2**k)
-            enddo
-            op(i+1,iq)=jq; vxoper(nv)=i+1 !act operator number i+1 on initial plaquette config iq gives jq
-            vxcode(i+1,iq)=nv !given operator number (i+1) and the initial state iq, you know what vertex number it is referring to
-            do k=0,7
-                vxleg(k,nv)=ns1(k)
-            enddo
-        endif
-    enddo
+    if (act_tdm(ns(0)) /= -1 .and. act_tdp(ns(1)) /= -1) then !if it is TmTp
+    !two if statements in case one vertex number allows both TpTm and TmTp to act on it.
+        opnum = 2
+        !write(*,*)'iq',iq, 'ns0', ns(0), 'ns1', ns(1), 'opnum', opnum, act_tdm(ns(0)), act_tdp(ns(1))
+        ns(2) = act_tdm(ns(0))
+        ns(3) = act_tdp(ns(1))
+        iiv = 0
+        do k=0,3
+            iiv = iiv + ns(k)*(4**k)
+        enddo
+        nvx=nvx+1
+        ivx(iiv) = nvx; vxi(nvx) = iiv
+        jq=0
+        do k=0,1
+            jq=jq+ns(k+2)*(4**k)
+        enddo
+        op(opnum,iq) = jq; vxoper(nvx) = opnum  
+        vxcode(opnum,iq) = nvx
+        do k = 0,3
+            vxleg(k,nvx) = ns(k)
+        enddo
+        vx_matrix_ele(iiv) = 0.5*(j1+j2) !weight of T-T+ matrix ele 
+    endif
 enddo
 
-do iq=0,15
-    ns(0:7)=0
-    do i=0,3
-        if(btest(iq,i)) ns(i)=1
-        ns(i+4)=ns(i)
+!======================================!
+! Off diagonal vertices
+! this represents TzDz, TpDm and TmDp
+!======================================!
+
+do iq=0,max_bond_num
+    ns(0:3) = 0
+    iiq=iq
+    do i=0,1
+        ns(i)=mod(iiq,4); iiq=iiq/4
     enddo
-    if((ns(0).eq.0).and.(ns(1).eq.0) &
-        .and.(ns(2).eq.1).and.(ns(3).eq.1)) then
-        ns(4)=1; ns(5)=1; ns(6)=0; ns(7)=0
-        iiv=0
-        do k=0,7
-            iiv=iiv+ns(k)*(2**k)
-        enddo
-        nv=nv+1
-        ivx(iiv)=nv; vxi(nv)=iiv
-        jq=0
+
+    if ( act_tdz(ns(0)) /= -1 .and. act_ddz(ns(1)) /= -1) then !if Tz Dz
+        opnum = 3
+        !write(*,*)'iq',iq, 'ns0', ns(0), 'ns1', ns(1), 'opnum', opnum, act_tdz(ns(0)), act_ddz(ns(1))
+        ns(2) = act_tdz(ns(0))
+        ns(3) = act_ddz(ns(1))
+        iiv = 0
         do k=0,3
-            jq=jq+ns(k+4)*(2**k)
+            iiv = iiv + ns(k)*(4**k)
         enddo
-        op(5,iq)=jq; vxoper(nv)=5
-        vxcode(5,iq)=nv
-        do k=0,7
-            vxleg(k,nv)=ns(k)
-        enddo
-     elseif  ((ns(0).eq.1).and.(ns(1).eq.1) &
-        .and.(ns(2).eq.0).and.(ns(3).eq.0))then
-        ns(4)=0; ns(5)=0; ns(6)=1; ns(7)=1
-        iiv=0
-        do k=0,7
-            iiv=iiv+ns(k)*(2**k)
-        enddo
-        nv=nv+1
-        ivx(iiv)=nv; vxi(nv)=iiv
+        nvx=nvx+1
+        ivx(iiv) = nvx; vxi(nvx) = iiv
         jq=0
+        do k=0,1
+            jq=jq+ns(k+2)*(4**k) !encode the resulting vertex into an integer jq
+        enddo
+        op(opnum,iq) = jq; vxoper(nvx) = opnum  
+        vxcode(opnum,iq) = nvx
+        do k = 0,3
+            vxleg(k,nvx) = ns(k)
+        enddo
+        vx_matrix_ele(iiv) = 0.5*ABS(j1-j2)!weight of TzDz matrix ele (CHECK IF GOT MINUS SIGN)
+    endif
+
+    if (act_tdp(ns(0)) /= -1 .and. act_ddm(ns(1)) /= -1) then
+        opnum = 4
+        !write(*,*)'iq',iq, 'ns0', ns(0), 'ns1', ns(1), 'opnum', opnum, act_tdp(ns(0)), act_ddm(ns(1))
+        ns(2) = act_tdp(ns(0))
+        ns(3) = act_ddm(ns(1))
+        iiv = 0
         do k=0,3
-            jq=jq+ns(k+4)*(2**k)
+            iiv = iiv + ns(k)*(4**k)
         enddo
-        op(5,iq)=jq; vxoper(nv)=5
-        vxcode(5,iq)=nv
-        do k=0,7
-            vxleg(k,nv)=ns(k)
-        enddo
-     elseif  ((ns(0).eq.1).and.(ns(1).eq.0) &
-        .and.(ns(2).eq.0).and.(ns(3).eq.1))then
-        ns(4)=0; ns(5)=1; ns(6)=1; ns(7)=0
-        iiv=0
-        do k=0,7
-            iiv=iiv+ns(k)*(2**k)
-        enddo
-        nv=nv+1
-        ivx(iiv)=nv; vxi(nv)=iiv
+        nvx=nvx+1
+        ivx(iiv) = nvx; vxi(nvx) = iiv
         jq=0
+        do k=0,1
+            jq=jq+ns(k+2)*(4**k) !encode the resulting vertex into an integer jq
+        enddo
+        op(opnum,iq) = jq; vxoper(nvx) = opnum  
+        vxcode(opnum,iq) = nvx
+        do k = 0,3
+            vxleg(k,nvx) = ns(k)
+        enddo
+        vx_matrix_ele(iiv) = 0.5*ABS(j1-j2) !weight of T+D- matrix ele (CHECK IF GOT MINUS SIGN)
+    endif
+
+    if (act_tdm(ns(0)) /= -1 .and. act_ddp(ns(1)) /= -1) then
+        opnum = 5
+        !write(*,*)'iq',iq, 'ns0', ns(0), 'ns1', ns(1), 'opnum', opnum, act_tdm(ns(0)), act_ddp(ns(1))
+        ns(2) = act_tdm(ns(0))
+        ns(3) = act_ddp(ns(1))
+        iiv = 0
         do k=0,3
-            jq=jq+ns(k+4)*(2**k)
+            iiv = iiv + ns(k)*(4**k)
         enddo
-        op(6,iq)=jq; vxoper(nv)=6
-        vxcode(6,iq)=nv
-        do k=0,7
-            vxleg(k,nv)=ns(k)
-        enddo
-     elseif  ((ns(0).eq.0).and.(ns(1).eq.1) &
-        .and.(ns(2).eq.1).and.(ns(3).eq.0))then
-        ns(4)=1; ns(5)=0; ns(6)=0; ns(7)=1
-        iiv=0
-        do k=0,7
-            iiv=iiv+ns(k)*(2**k)
-        enddo
-        nv=nv+1
-        ivx(iiv)=nv; vxi(nv)=iiv
+        nvx=nvx+1
+        ivx(iiv) = nvx; vxi(nvx) = iiv
         jq=0
-        do k=0,3
-            jq=jq+ns(k+4)*(2**k)
+        do k=0,1
+            jq=jq+ns(k+2)*(4**k) !encode the resulting vertex into an integer jq
         enddo
-        op(6,iq)=jq; vxoper(nv)=6
-        vxcode(6,iq)=nv
-        do k=0,7
-            vxleg(k,nv)=ns(k)
+        op(opnum,iq) = jq; vxoper(nvx) = opnum  
+        vxcode(opnum,iq) = nvx
+        do k = 0,3
+            vxleg(k,nvx) = ns(k)
         enddo
+        vx_matrix_ele(iiv) = 0.5*ABS(j1-j2) !weight of T-D+ matrix ele (CHECK IF GOT MINUS SIGN)
     endif
 enddo
 
 end subroutine vxweight
+!==================================!
+
+!==================================!
 
 subroutine initvrtx
 !==============================!
 use hyzer; implicit none
 
-integer::ns(0:7),i,iiq,ic,oc,iiv,ns1(0:7),k,ns2(0:7),iq,o
+integer :: ns(0:3),i,iiq,ic,oc,iiv,ns1(0:3),k,ns2(0:3),instate,outstate,vertex_num
+integer :: counter = 0
 
-vxprb(:,:,:)=0 !vxprb stores the probability of accepting the change
-vxnew(:,:,:)=0
+vxprb_t_worm(:,:,:,:)=0.d0!vxprb stores the probability of accepting the change
+vxprb_d_worm(:,:,:,:) =0.d0 
+vxnew(:,:,:,:)=0
 do i=1,nvx
     iiq=vxi(i) !retrieve the binary number representing the vertex
-    ns(0)=mod(iiq,2); iiq=iiq/2 !undo the binary number to retrieve the spins
-    ns(1)=mod(iiq,2); iiq=iiq/2
-    ns(2)=mod(iiq,2); iiq=iiq/2
-    ns(3)=mod(iiq,2); iiq=iiq/2
-    ns(4)=mod(iiq,2); iiq=iiq/2
-    ns(5)=mod(iiq,2); iiq=iiq/2
-    ns(6)=mod(iiq,2); iiq=iiq/2
-    ns(7)=mod(iiq,2); iiq=iiq/2
-    do ic=0,7
-        ns1(:)=ns(:)
-        ns1(ic)=1-ns1(ic) !flip in the in spin
-        ns2(:)=ns1(:)
-        do oc=0,7
-            ns1(oc)=1-ns1(oc) !flip the out spin
-            iiv=0
-            do k=0,7
-                iiv=iiv+ns1(k)*(2**k)
-            enddo
-            if (ivx(iiv)/=-1) then !if such a valid vertex exists, meaning not making some illegal update
-                vxnew(oc,ic,i)=ivx(iiv) !vxnew array takes oc (out spin), ic (in spin) and vertex number and gives you resulting vertex
-                o=vxoper(ivx(iiv)) !gives you operator type (0 for diagonal, 1,2,3,4 for single hop, 5,6 for pair hop)
-                if (o==0) then
-                    iq=0
-                    do k=0,3
-                        iq=iq+ns1(k)*(2**k)
-                    enddo
+    do k = 0,3
+        ns(k)=mod(iiq,4); iiq=iiq/4 !undo the binary number to retrieve the spins
+    enddo
 
-                    vxprb(oc,ic,i)=awgt(iq) !if diagonal operator, no change, then weight is simply weight of that vertex
-                elseif (o==1 .or. o==2 .or. o==3 .or. o==4 ) then
-                    
-                    vxprb(oc,ic,i)=tt !if its single hop, then weight is equal to tt (single hop amplitude)
-                    if (o==1 .and. (ns1(1)>ns1(0))) then
-                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-1 !ctra is the array to calculate stiffness.
-                    elseif (o==1 .and. (ns1(1)<ns1(0))) then !given operator and the initial spin configurations, you know how the spin
-                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=1 !will hop, then you know how to calculate the stiffness accordingly.
-                    elseif (o==2 .and. ns1(2)>ns1(1)) then
-                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-1
-                    elseif (o==2 .and. ns1(2)<ns1(1)) then
-                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=1
-                    elseif (o==3 .and. ns1(3)>ns1(2)) then
-                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=1
-                    elseif (o==3 .and. ns1(3)<ns1(2)) then
-                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-1
-                    elseif (o==4 .and. ns1(3)>ns1(0)) then
-                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-1
-                    else
-                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=1
-                    endif
-                else
-                    counter = counter + 1
-                    vxprb(oc,ic,i)=tp !if pair hop then proportional to tp
-                    if (o==5 .and. ns1(1)<ns1(2)) then
-                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-2
-                    elseif (o==5 .and. ns1(1)>ns1(2)) then
-                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=2
-                    elseif (o==6 .and. ns1(0)>ns1(1)) then
-                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=2
-                    else
-                        ctra(o,ns1(0),ns1(1),ns1(2),ns1(3))=-2
+    do ic=0,3
+        instate = ns(ic)
+        !====================== START OF T+ T- WORM============================!
+        !do TpTm/TmTp worm probabilities first, so check action of T+ or T-
+        if (act_tdp(instate) /= -1) then !if can act T+ on inleg
+            ns1(:)=ns(:) !copy a ns1 to flip in leg
+            ns1(ic) = act_tdp(instate)
+            do oc =0,3
+                ns2(:) = ns1(:) !copy a ns2 to flip out leg
+                outstate = ns2(oc)
+
+                if (act_tdp(outstate) /= -1) then !if can act T+ on outleg
+                    ns2(oc) = act_tdp(outstate)
+                    iiv = 0
+                    do k = 0,3
+                        iiv = iiv + ns2(k)*(4**k)
+                    enddo
+                    if (ivx(iiv)/= -1) then ! if its not -1 then it is a valid vertex
+                        vertex_num = ivx(iiv)
+                        vxnew(ic,oc,ns1(ic),i) = vertex_num
+                        vxprb_t_worm(ic,oc,ns1(ic),i) = vx_matrix_ele(iiv)
                     endif
                 endif
-            endif
-            ns1(:)=ns2(:) !you want to undo the out spin flip, because you are looping to try the next outspin.
+
+                if (act_tdm(outstate) /= -1) then !if can act T- on outleg
+                    ns2(oc) = act_tdm(outstate)
+                    iiv = 0
+                    do k = 0,3
+                        iiv = iiv + ns2(k)*(4**k)
+                    enddo
+                    if (ivx(iiv)/= -1) then ! if its not -1 then it is a valid vertex
+                        vertex_num = ivx(iiv)
+                        vxnew(ic,oc,ns1(ic),i) = vertex_num
+                        vxprb_t_worm(ic,oc,ns1(ic),i) = vx_matrix_ele(iiv) 
+                    endif
+                endif
+            enddo
+        endif
+        
+        if (act_tdm(instate) /= -1) then !if can act T- on inleg
+            ns1(:)=ns(:) !copy a ns1 to flip in leg
+            ns1(ic) = act_tdm(instate)
+            do oc =0,3
+                ns2(:) = ns1(:) !copy a ns2 to flip out leg
+                outstate = ns2(oc)
+
+                if (act_tdp(outstate) /= -1) then !if can act T+ on outleg
+                    ns2(oc) = act_tdp(outstate)
+                    iiv = 0
+                    do k = 0,3
+                        iiv = iiv + ns2(k)*(4**k)
+                    enddo
+                    if (ivx(iiv)/= -1) then ! if its not -1 then it is a valid vertex
+                        vertex_num = ivx(iiv)
+                        vxnew(ic,oc,ns1(ic),i) = vertex_num
+                        vxprb_t_worm(ic,oc,ns1(ic),i) = vx_matrix_ele(iiv)
+                    endif
+                endif
+
+                if (act_tdm(outstate) /= -1) then !if can act T- on outleg
+                    ns2(oc) = act_tdm(outstate)
+                    iiv = 0
+                    do k = 0,3
+                        iiv = iiv + ns2(k)*(4**k)
+                    enddo
+                    if (ivx(iiv)/= -1) then ! if its not -1 then it is a valid vertex
+                        vertex_num = ivx(iiv)
+                        vxnew(ic,oc,ns1(ic),i) = vertex_num
+                        vxprb_t_worm(ic,oc,ns1(ic),i) = vx_matrix_ele(iiv) 
+                    endif
+                endif
+            enddo
+        endif
+        !===========END OF T+ T- WORM==============================!
+
+        !============START OF Dz D+ D- WORM====================!
+        if (act_ddp(instate) /= -1) then !if can act D+ on inleg
+            ns1(:)=ns(:) !copy a ns1 to flip in leg
+            ns1(ic) = act_ddp(instate)
+            do oc =0,3
+                ns2(:) = ns1(:) !copy a ns2 to flip out leg
+                outstate = ns2(oc)
+
+                if (act_ddp(outstate) /= -1) then !if can act D+ on outleg
+                    ns2(oc) = act_ddp(outstate)
+                    iiv = 0
+                    do k = 0,3
+                        iiv = iiv + ns2(k)*(4**k)
+                    enddo
+                    if (ivx(iiv)/= -1) then ! if its not -1 then it is a valid vertex
+                        vertex_num = ivx(iiv)
+                        vxnew(ic,oc,ns1(ic),i) = vertex_num
+                        vxprb_d_worm(ic,oc,ns1(ic),i) = vx_matrix_ele(iiv)
+                    endif
+                endif
+
+                if (act_ddm(outstate) /= -1) then !if can act D- on outleg
+                    ns2(oc) = act_ddm(outstate)
+                    iiv = 0
+                    do k = 0,3
+                        iiv = iiv + ns2(k)*(4**k)
+                    enddo
+                    if (ivx(iiv)/= -1) then ! if its not -1 then it is a valid vertex
+                        vertex_num = ivx(iiv)
+                        vxnew(ic,oc,ns1(ic),i) = vertex_num
+                        vxprb_d_worm(ic,oc,ns1(ic),i) = vx_matrix_ele(iiv)
+                    endif
+                endif
+
+                if (act_ddz(outstate) /= -1) then !if can act Dz on outleg
+                    ns2(oc) = act_ddz(outstate)
+                    iiv = 0
+                    do k = 0,3
+                        iiv = iiv + ns2(k)*(4**k)
+                    enddo
+                    if (ivx(iiv)/= -1) then ! if its not -1 then it is a valid vertex
+                        vertex_num = ivx(iiv)
+                        vxnew(ic,oc,ns1(ic),i) = vertex_num
+                        vxprb_d_worm(ic,oc,ns1(ic),i) = vx_matrix_ele(iiv) 
+                    endif
+                endif
+
+            enddo
+        endif
+        
+        if (act_ddm(instate) /= -1) then !if can act D- on inleg
+            ns1(:)=ns(:) !copy a ns1 to flip in leg
+            ns1(ic) = act_ddm(instate)
+            do oc =0,3
+                ns2(:) = ns1(:) !copy a ns2 to flip out leg
+                outstate = ns2(oc)
+
+                if (act_ddp(outstate) /= -1) then !if can act D+ on outleg
+                    ns2(oc) = act_ddp(outstate)
+                    iiv = 0
+                    do k = 0,3
+                        iiv = iiv + ns2(k)*(4**k)
+                    enddo
+                    if (ivx(iiv)/= -1) then ! if its not -1 then it is a valid vertex
+                        vertex_num = ivx(iiv)
+                        vxnew(ic,oc,ns1(ic),i) = vertex_num
+                        vxprb_d_worm(ic,oc,ns1(ic),i) = vx_matrix_ele(iiv) 
+                    endif
+                endif
+
+                if (act_ddm(outstate) /= -1) then !if can act D- on outleg
+                    ns2(oc) = act_ddm(outstate)
+                    iiv = 0
+                    do k = 0,3
+                        iiv = iiv + ns2(k)*(4**k)
+                    enddo
+                    if (ivx(iiv)/= -1) then ! if its not -1 then it is a valid vertex
+                        vertex_num = ivx(iiv)
+                        vxnew(ic,oc,ns1(ic),i) = vertex_num
+                        vxprb_d_worm(ic,oc,ns1(ic),i) = vx_matrix_ele(iiv) 
+                    endif
+                endif
+
+                if (act_ddz(outstate) /= -1) then !if can act Dz on outleg
+                    ns2(oc) = act_ddz(outstate)
+                    iiv = 0
+                    do k = 0,3
+                        iiv = iiv + ns2(k)*(4**k)
+                    enddo
+                    if (ivx(iiv)/= -1) then ! if its not -1 then it is a valid vertex
+                        vertex_num = ivx(iiv)
+                        vxnew(ic,oc,ns1(ic),i) = vertex_num
+                        vxprb_d_worm(ic,oc,ns1(ic),i) = vx_matrix_ele(iiv) 
+                    endif
+                endif
+
+            enddo
+        endif
+
+        if (act_ddz(instate) /= -1) then !if can act Dz on inleg
+            ns1(:)=ns(:) !copy a ns1 to flip in leg
+            ns1(ic) = act_ddz(instate)
+            do oc =0,3
+                ns2(:) = ns1(:) !copy a ns2 to flip out leg
+                outstate = ns2(oc)
+
+                if (act_ddp(outstate) /= -1) then !if can act D+ on outleg
+                    ns2(oc) = act_ddp(outstate)
+                    iiv = 0
+                    do k = 0,3
+                        iiv = iiv + ns2(k)*(4**k)
+                    enddo
+                    if (ivx(iiv)/= -1) then ! if its not -1 then it is a valid vertex
+                        vertex_num = ivx(iiv)
+                        vxnew(ic,oc,ns1(ic),i) = vertex_num
+                        vxprb_d_worm(ic,oc,ns1(ic),i) = vx_matrix_ele(iiv) 
+                    endif
+                endif
+
+                if (act_ddm(outstate) /= -1) then !if can act D- on outleg
+                    ns2(oc) = act_ddm(outstate)
+                    iiv = 0
+                    do k = 0,3
+                        iiv = iiv + ns2(k)*(4**k)
+                    enddo
+                    if (ivx(iiv)/= -1) then ! if its not -1 then it is a valid vertex
+                        vertex_num = ivx(iiv)
+                        vxnew(ic,oc,ns1(ic),i) = vertex_num
+                        vxprb_d_worm(ic,oc,ns1(ic),i) = vx_matrix_ele(iiv) 
+                    endif
+                endif
+
+                if (act_ddz(outstate) /= -1) then !if can act Dz on outleg
+                    ns2(oc) = act_ddz(outstate)
+                    iiv = 0
+                    do k = 0,3
+                        iiv = iiv + ns2(k)*(4**k)
+                    enddo
+                    if (ivx(iiv)/= -1) then ! if its not -1 then it is a valid vertex
+                        vertex_num = ivx(iiv)
+                        vxnew(ic,oc,ns1(ic),i) = vertex_num
+                        vxprb_d_worm(ic,oc,ns1(ic),i) = vx_matrix_ele(iiv) 
+                    endif
+                endif
+
+            enddo
+        endif
+        !===========END OF Dz D+ D- WORM==============================!
+    enddo
+enddo
+
+do i=1,nvx
+    do ic=0,3
+        do instate = 0,3
+            do oc= 1,3
+                vxprb_t_worm(ic,oc,instate,i)=vxprb_t_worm(ic,oc,instate,i)+vxprb_t_worm(ic,oc-1,instate,i)
+                vxprb_d_worm(ic,oc,instate,i)=vxprb_d_worm(ic,oc,instate,i)+vxprb_d_worm(ic,oc-1,instate,i)
+                !write(*,*) vxprb_t_worm(ic,oc,instate,i), vxprb_d_worm(ic,oc,instate,i)
+                !write(*,*) 
+            enddo
         enddo
     enddo
 enddo
 
-
 do i=1,nvx
-    do ic=0,7
-        do oc=1,7
-            vxprb(oc,ic,i)=vxprb(oc,ic,i)+vxprb(oc-1,ic,i)!sum the probabilities so it is easier to decide vertex change or not
-            !eg, vxprb(0,0,1)=0.2,vxprb(1,0,1)=0.2,vxprb(2,0,1)=0.5,vxprb(3,0,1)=0.1. total probability = 1
-            !vxprb(2,0,1)=0.2+0.2+0.5=0.9. Therefore to decide if you accept going in at leg 0, exiting at leg 2 of vertex number 1,
-            !generate random number, if random number <0.9, accept it.
-            
-        enddo
-    enddo
-enddo
-do i=1,nvx
-    do ic=0,7
-        do oc=0,7
-            vxprb(oc,ic,i)=vxprb(oc,ic,i)/vxprb(7,ic,i) !for this step, we normalize all the probabilties, because before
-            if (vxprb(oc,ic,i).lt.1e-6) then
-                vxprb(oc,ic,i)=-1. !we let some probabilities be like tt or tp, and they are >1
-            endif
+    do ic=0,3
+        do instate = 0,3
+            do oc= 0,3
+                if (vxprb_t_worm(ic,3,instate,i) /= 0.d0) then 
+                !'if' statement necessary as sometimes it is 0, then you are dividing by 0
+                    vxprb_t_worm(ic,oc,instate,i)=vxprb_t_worm(ic,oc,instate,i)/vxprb_t_worm(ic,3,instate,i)
+                endif
+                if (vxprb_d_worm(ic,3,instate,i) /= 0.d0) then
+                    vxprb_d_worm(ic,oc,instate,i)=vxprb_d_worm(ic,oc,instate,i)/vxprb_d_worm(ic,3,instate,i)
+                endif
+                
+                !set all probability = 0s to -1
+                if (vxprb_t_worm(ic,oc,instate,i).lt.1.e-6) vxprb_t_worm(ic,oc,instate,i)=-1.
+                if (vxprb_d_worm(ic,oc,instate,i).lt.1.e-6) vxprb_d_worm(ic,oc,instate,i)=-1. 
+            enddo
         enddo
     enddo
 enddo
@@ -389,10 +650,13 @@ enddo
 
 end subroutine initvrtx
 !===================================!
+    
 
 program main
 use hyzer; implicit none
+ 
 call lattice
+call matrix_ele
 call pvect0
 call vxweight
 call initvrtx
