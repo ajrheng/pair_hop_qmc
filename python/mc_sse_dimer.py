@@ -39,8 +39,14 @@ class mc_sse_dimer:
     opstring = np.zeros(l,dtype=np.int64) 
     vert = np.zeros(l,dtype=np.int64)
     link = np.zeros(4*l,dtype=np.int64)
+    num_op = 0
+    t_loop_len = 5
+    d_Loop_len = 5
     ns_to_iq = np.zeros((4,4),dtype=np.int64)
     iq_to_ns = np.zeros((2,MAX_BOND_NUM),dtype=np.int64)
+
+    #observables variables
+    num_op_for_energy = 0
 
     tp_wgt = np.zeros(4,dtype=np.float64)
     tm_wgt = np.zeros(4,dtype=np.float64)
@@ -48,6 +54,7 @@ class mc_sse_dimer:
     dp_wgt = np.zeros(4,dtype=np.float64)
     dm_wgt = np.zeros(4,dtype=np.float64)
     dz_wgt = np.zeros(4,dtype=np.float64)
+    t2_wgt = np.zeros(4,dtype=np.float64)
 
     act_tp = np.zeros(4,dtype=np.int64); act_tp[:] = -1
     act_tm = np.zeros(4,dtype=np.int64); act_tm[:] = -1
@@ -55,6 +62,7 @@ class mc_sse_dimer:
     act_dp = np.zeros(4,dtype=np.int64); act_dp[:] = -1
     act_dm = np.zeros(4,dtype=np.int64); act_dm[:] = -1
     act_dz = np.zeros(4,dtype=np.int64); act_dz[:] = -1
+    act_t2 = np.zeros(4,dtype=np.int64); act_t2[:] = -1
 
     nvx = 0 #counter for num of vertices
 
@@ -75,7 +83,9 @@ class mc_sse_dimer:
         self.state = np.zeros(self.nn,dtype=np.int8) #create 1D array
         self.cords_of_site = np.zeros((2,self.nn),dtype=np.int64) #given site number, what is the coordinates 
         self.site_of_cords = np.zeros((self.nx,self.ny),dtype=np.int64) #given coordinates, what is the site number 
-        self.bond = np.zeros((2,self.nb),dtype=np.int64)
+        self.bond = np.zeros((2,self.nb+1),dtype=np.int64) #index bond from 1 to nb (inclusive)
+        self.first = np.zeros(self.nn,dtype=int)
+        self.last = np.zeros(self.nn, dtype=int)
 
         np.random.seed(int(time.time())) #set random seed when constructor called
 
@@ -96,19 +106,19 @@ class mc_sse_dimer:
         q = 0
         for y in range(self.ny): 
             for x in range(self.nx):
+                q = q+1
                 x1 = x; y1 = y 
                 x2 = (x1+1) % self.nx ; y2 = y1 
                 self.bond[0,q] = self.site_of_cords[x1,y1]
                 self.bond[1,q] = self.site_of_cords[x2,y2]
-                q = q+1
 
         for x in range(self.nx): 
             for y in range(self.ny):
+                q = q+1
                 x1 = x; y1 = y 
                 x2 = x1 ; y2 = (y1+1)% self.ny 
                 self.bond[0,q] = self.site_of_cords[x1,y1]
                 self.bond[1,q] = self.site_of_cords[x2,y2]
-                q = q+1
 
         for iq in range(self.MAX_BOND_NUM):
             iiq = iq
@@ -127,14 +137,17 @@ class mc_sse_dimer:
        self.tz_wgt[1] = -1
        self.tp_wgt[1] = np.sqrt(2)
        self.dp_wgt[1] = np.sqrt(2)
+       self.t2_wgt[1] = 2
 
        self.tp_wgt[2] = np.sqrt(2)
        self.tm_wgt[2] = np.sqrt(2)
        self.dz_wgt[2] = 1
+       self.t2_wgt[2] = 2
 
        self.tz_wgt[3] = 1
        self.tm_wgt[3] = np.sqrt(2)
        self.dm_wgt[3] = np.sqrt(2)
+       self.t2_wgt[3] = 2
 
        self.act_dz[0] = 2
        self.act_dp[0] = 3
@@ -143,29 +156,36 @@ class mc_sse_dimer:
        self.act_tz[1] = 1
        self.act_tp[1] = 2
        self.act_dp[1] = 0
+       self.act_t2[1] = 1
 
        self.act_tp[2] = 3
        self.act_tm[2] = 1
        self.act_dz[2] = 0
+       self.act_t2[2] = 2
 
        self.act_tz[3] = 3
        self.act_tm[3] = 2
        self.act_dm[3] = 0
+       self.act_t2[3] = 3
 
     def pvect0(self):
+        
+        max_wgt = 0
 
         for iq in range(self.MAX_BOND_NUM):
             s1 = self.iq_to_ns[0,iq]
             s2 = self.iq_to_ns[1,iq]
-            self.wgt[iq] = 0.5 * (self.j1 + self.j2) * self.tz_wgt[s1] * self.tz_wgt[s2]         
-            # if self.wgt[iq] > max_wgt:
-            #     max_wgt = self.wgt[iq]
+            self.wgt[iq] = 0.5 * (self.j1 + self.j2) * self.tz_wgt[s1] * self.tz_wgt[s2] 
+            self.wgt[iq] += (0.5 * self.act_t2[s1] - 3/4) + (0.5*self.act_t2[s2] - 3/4)        
+            if self.wgt[iq] > max_wgt:
+                max_wgt = self.wgt[iq]
 
-        # max_wgt = max_wgt + 1
-        self.wgt = np.add(self.wgt,0.5*(self.j1+self.j2))
-        self.awgt[:] = self.wgt[:]
+        max_wgt += 1
+        #self.wgt = np.add(self.wgt,0.5*(self.j1+self.j2))
+        #self.awgt[:] = self.wgt[:]
 
         for iq in range(self.MAX_BOND_NUM):
+            self.awgt[iq] = max_wgt - self.wgt[iq]
             if self.awgt[iq] > 1e-6:
                 self.dwgt[iq] = 1/self.awgt[iq]
             else:
@@ -482,3 +502,135 @@ class mc_sse_dimer:
                             self.t_worm_prob[ic,oc,instate,i] = -1
                         if self.d_worm_prob[ic,oc,instate,i] < 1e-6:
                             self.d_worm_prob[ic,oc,instate,i] = -1
+
+    def diagonal_update(self):
+        
+        for i in range(self.l):
+            ii = self.opstring[i]
+            if ii == 0:
+                b = random.randrange(1,self.nb+1) #note the range, randrange is not inclusive of end
+                ns0 = self.state[self.bond[0,b]]
+                ns1 = self.state[self.bond[1,b]]
+                iq = self.ns_to_iq[ns0,ns1]
+                accept_prob = self.awgt[iq]*self.beta*self.nb/(self.l-self.num_op)
+                if accept_prob >= 1 or random.random() <= accept_prob:
+                    self.opstring[i] = 6 * b
+                    self.num_op += 1
+
+            elif ii%6 == 0:
+                b = ii//6
+                ns0 = self.state[self.bond[0,b]]
+                ns1 = self.state[self.bond[1,b]]
+                iq = self.ns_to_iq[ns0,ns1]
+                accept_prob = self.dwgt[iq]*(self.l - self.num_op + 1)/(self.beta*self.nb)
+                if accept_prob >= 1 or random.random() <= accept_prob:
+                    self.opstring[i] = 0
+                    self.num_op -= 1
+
+            else:
+                b = ii//6
+                o = ii%6
+                ns0 = self.state[self.bond[0,b]]
+                ns1 = self.state[self.bond[1,b]]
+                iq = self.ns_to_iq[ns0,ns1]
+                jq = self.op[o,iq]
+                self.state[bond[0,b]] = self.iq_to_ns[0,jq]
+                self.state[bond[1,b]] = self.iq_to_ns[1,jq]
+
+        self.num_op_for_energy += self.num_op
+
+    def linked_list(self):
+
+        i = 0; i0 = 0; i1 = 1
+
+        for j in range(self.l):
+            ii = self.opstring[j]
+            if ii != 0:
+                o = ii%6
+                b = ii//6
+                s0 = self.bond[0,b]; s1 = self.bond[1,b]
+                ns0 = self.state[s0]; ns1 = self.state[s1]
+                iq = self.ns_to_iq[ns0,ns1]
+                self.vert[i] = self.vx_num_aft_op[o,iq]
+                if self.vert[i] == -1:
+                    print('error here, vert is -1')
+                jq = self.op[o,iq]
+                self.state[self.bond[0,b]] = self.iq_to_ns[0,jq]
+                self.state[self.bond[1,b]] = self.iq_to_ns[1,jq]
+                p0 = self.last[s0]
+                p1 = self.last[s1]
+                if p0 != -1:
+                    self.link[p0] = i0
+                    self.link[i0] = p0
+                else:
+                    self.first[s0] = i0
+                if p1 != -1:
+                    self.link[p1] = i1
+                    self.link[i1] = p1
+                else:
+                    self.first[s1] = i1
+                self.last[s0] = i0 + 2
+                self.last[s1] = i1 + 2
+                i += 1; i0 += 4; i1 += 4
+
+        for s in range(self.nn):
+            i = self.first[s]
+            if i != -1:
+                p0 = self.last[s]
+                self.link[p0] = i
+                self.link[i] = p0
+                
+    def t_loop_update(self):
+
+        ml = 100*self.l
+
+        for i in range(self.t_loop_len):
+            nv = 0
+            vx0 = -1
+            init_state = 0
+
+            while (init_state == 0 or init_state == -1 or vx0 == -1):
+                init_p = random.randrange(0,4*num_op)
+                vp0 = init_p//4
+                vert_num0 = self.vert(vp0)
+                in_leg0 = init_p%4
+                init_state = self.vx_leg[in_leg0, vert_num0]
+
+            bef_init_p = self.link(init_p)
+            vx = self.vert(bef_init_p//4)
+            in_leg = bef_init_p%4
+            bef_init_state = self.vx_leg[in_leg, vx]
+
+            p1 = init_p
+
+            for j in range(ml):
+                vp = p1//4
+                vx = self.vert(vp)
+                in_leg = p1%4
+                in_state = self.vx_leg[in_leg, vx]
+
+                if j==1:
+                    if init_state == 2:
+                        if random.random() <= 0.5:
+                            instate_aft_flip = self.act_tp[init_state]
+                        else:
+                            instate_aft_flip = self.act_tm[init_state]
+                    elif init_state == 1:
+                        instate_aft_flip = self.act_tp[init_state]
+                    else:
+                        instate_aft_flip = self.act_tm[init_state]
+                else:
+                    instate_aft_flip = outstate_aft_flip
+
+            
+            r = random.random()
+            for out_leg in range(4):
+                if r <= self.t_worm_prob[in_leg, out_leg, instate_aft_flip, vx]:
+                    new_vx = self.vx_new[in_leg, out_leg, instate_aft_flip, vx]
+                    outstate_aft_flip = self.vx_leg[out_leg, new_vx]
+                    self.vert[vp] = new_vx
+                    break
+            
+            if out_leg == 4:
+                
+            
