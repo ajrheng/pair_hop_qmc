@@ -35,7 +35,7 @@ class mc_sse_dimer:
     d_worm_prob = np.zeros((4,4,4,MAX_VX_NUM),dtype=np.float64)
     vx_matrix_ele = np.zeros(MAX_VX_NUM, dtype=np.float64)
 
-    l = 5 #initial length of opstring and related arrays
+    l = 20 #initial length of opstring and related arrays
     opstring = np.zeros(l,dtype=np.int64) 
     vert = np.zeros(l,dtype=np.int64)
     link = np.zeros(4*l,dtype=np.int64)
@@ -69,8 +69,9 @@ class mc_sse_dimer:
     act_t2 = np.zeros(4,dtype=np.int64); act_t2[:] = -1
 
     nvx = 0 #counter for num of vertices
+    passed = False 
 
-    def __init__(self,j1,j2,beta,nx,equil_steps = 1e5, mc_steps = 1e5, num_runs = 10):
+    def __init__(self,j1,j2,beta,nx,equil_steps = 1e4, mc_steps = 1e4, num_runs = 10):
 
         # Hamiltonian parameters
         self.j1 = j1
@@ -543,8 +544,8 @@ class mc_sse_dimer:
                 ns1 = self.state[self.bond[1,b]]
                 iq = self.ns_to_iq[ns0,ns1]
                 jq = self.op[o,iq]
-                self.state[bond[0,b]] = self.iq_to_ns[0,jq]
-                self.state[bond[1,b]] = self.iq_to_ns[1,jq]
+                self.state[self.bond[0,b]] = self.iq_to_ns[0,jq]
+                self.state[self.bond[1,b]] = self.iq_to_ns[1,jq]
 
         self.num_op_for_energy += self.num_op
 
@@ -564,6 +565,8 @@ class mc_sse_dimer:
                 self.vert[i] = self.vx_num_aft_op[o,iq]
                 if self.vert[i] == -1:
                     print('error here, vert is -1')
+                    print('s0: {0}, s1: {1}, ns0: {2}, ns1: {3}'.format(s0,s1,ns0,ns1))
+                    print('opstring: {4}, i: {0}, o: {1}, iq: {2}, b: {3}'.format(i,o,iq,b,ii))
                 jq = self.op[o,iq]
                 self.state[self.bond[0,b]] = self.iq_to_ns[0,jq]
                 self.state[self.bond[1,b]] = self.iq_to_ns[1,jq]
@@ -597,7 +600,7 @@ class mc_sse_dimer:
            
     def t_loop_update(self):
 
-        #ml = 100*self.l
+        ml = 100*self.l
 
         for i in range(self.t_loop_len):
             nv = 0
@@ -610,6 +613,9 @@ class mc_sse_dimer:
                 vert_num0 = self.vert[vp0]
                 in_leg0 = init_p%4
                 init_state = self.vx_leg[in_leg0, vert_num0]
+                if (init_state == 0 or init_state == -1 or vert_num0 == -1):
+                    print(init_p, vp0, vert_num0, in_leg0, init_state)
+            #print('out of while')
 
             bef_init_p = self.link[init_p]
             vx = self.vert[bef_init_p//4]
@@ -617,8 +623,9 @@ class mc_sse_dimer:
             bef_init_state = self.vx_leg[in_leg, vx]
 
             p1 = init_p
-
-            while True:
+            self.passed = False
+        
+            for _ in range(ml):
                 vp = p1//4
                 vx = self.vert[vp]
                 in_leg = p1%4
@@ -663,19 +670,20 @@ class mc_sse_dimer:
                 
                 if (p1 == init_p and init_state == bef_init_state) or \
                     (p1 == bef_init_p and init_state == bef_init_state):
-                    #self.passed = True
+                    self.passed = True
                     break
                 p1 = self.link[p1]
 
             self.num_opers_t += nv
-            #self.passed = False
-            #return 
+            if self.passed is False:
+                print('t pass false')
+                return 
 
         self.num_loops_t += self.t_loop_len
 
     def d_loop_update(self):
 
-        #ml = 100*self.l
+        ml = 100*self.l
 
         for i in range(self.d_loop_len):
             nv = 0
@@ -694,8 +702,9 @@ class mc_sse_dimer:
             bef_init_state = self.vx_leg[in_leg, vx]
 
             p1 = init_p
+            self.passed = False
 
-            while True:
+            for _ in range(ml):
                 vp = p1//4
                 vx = self.vert[vp]
                 in_leg = p1%4
@@ -744,13 +753,14 @@ class mc_sse_dimer:
                 
                 if (p1 == init_p and init_state == bef_init_state) or \
                     (p1 == bef_init_p and init_state == bef_init_state):
-                    #self.passed = True
+                    self.passed = True
                     break
                 p1 = self.link[p1]
 
             self.num_opers_d += nv
-            #self.passed = False
-            #return 
+            if self.passed is False:
+                print('d pass false')
+                return 
 
         self.num_loops_d += self.d_loop_len
 
@@ -785,8 +795,8 @@ class mc_sse_dimer:
     def adjust_trun_cutoff(self):
 
         temp_opstring = np.copy(self.opstring)
-        dl = self.l/10 + 2
-        if self.num_op < l-dl/2:
+        dl = int(self.l/10) + 2
+        if self.num_op < self.l-dl/2:
             return
         old_l = self.l
         self.l = self.l + dl
@@ -797,15 +807,19 @@ class mc_sse_dimer:
         self.vert = np.zeros(self.l,dtype=np.int64)
         self.link = np.zeros(4*self.l,dtype=np.int64)
 
+        print("new trun cutoff {0}".format(self.l))
+
     def adjust_loop_len(self):
 
-        avg_op_per_loop_t = self.num_loops_t/self.num_oper_t
+        avg_op_per_loop_t = self.num_loops_t/self.num_opers_t
         nl = 1+int(2*self.l/avg_op_per_loop_t)
         self.t_loop_len = int((self.t_loop_len+nl)/2)
 
-        avg_op_per_loop_d = self.num_loops_d/self.num_oper_d
+        avg_op_per_loop_d = self.num_loops_d/self.num_opers_d
         nl = 1+int(2*self.l/avg_op_per_loop_d)
         self.d_loop_len = int((self.d_loop_len+nl)/2)
+
+        print("new t and d loop lens are {0} and {1}".format(self.t_loop_len,self.d_loop_len))
 
     def write_observables(self):
 
@@ -826,20 +840,29 @@ class mc_sse_dimer:
         self.num_op_for_energy = 0
 
     def one_mc_step(self):
-        self.diagonal_update()
-        self.linked_list()
-        self.t_loop_update()
-        self.d_loop_update()
-        self.aft_loop_update()
+
+        self.passed = False
+        while self.passed is False:
+            self.diagonal_update()
+            print('finished diagonal_update()')
+            self.linked_list()
+            print('finished linked_list()')
+            self.t_loop_update()
+            print('finished t_loop_update()')
+            self.d_loop_update()
+            print('finished d_loopUpdate()')
+            self.aft_loop_update()
+            print('finished aft_loop_update')
 
     def equilibration(self):
         with open('log.txt','a') as file:
             file.write('Starting equilibration\n')
 
-        for i in range(self.mc_steps):
+        for i in range(1,int(self.mc_steps)+1):
+            print("equilibration step ", i)
             self.one_mc_step()
             self.adjust_trun_cutoff()
-            if i%(self.mc_steps//20) == 0: #call it 20 times
+            if i%(self.mc_steps//100) == 0: #call it 20 times
                 self.adjust_loop_len()
                 self.set_zero()
 
@@ -847,16 +870,45 @@ class mc_sse_dimer:
             file.write('Completed equilibration. L = {0}, t loop len = \
                 {1}, d loop len = {2}\n'.format(self.l,self.t_loop_len, self.d_loop_len))
 
+    def write_conf(self):
+        
+        with open('conf.txt','a') as file:
+            for i in range(self.nn):
+                file.write(str(self.state[i])," ")
+                if (i+1)%self.nx == 0:
+                    file.write("\n")
+
     def main_mc_runs(self):
 
         for i in self.num_runs():
+
             with open('log.txt','a') as file:
                 file.write('Starting run ', i,'\n')
             self.set_zero()
+
             for j in range(self.mc_steps):
                 self.one_mc_step()
+
             self.write_observables()
+
             with open('log.txt','a') as file:
-                file.write('Starting run ', i,'\n')
-                
+                file.write('Finished run ', i,'\n')
+            self.write_conf()
+    
+    def main(self):
+
+        #set up
+        self.init_state()
+        self.lattice()
+        self.init_matrix_ele()
+        self.pvect0()
+        self.vxweight()
+        self.initvrtx()
+    
+        #equilibrate
+        self.equilibration()
+
+        #run
+        self.main_mc_runs()
+
             
