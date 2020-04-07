@@ -35,13 +35,17 @@ class mc_sse_dimer:
     d_worm_prob = np.zeros((4,4,4,MAX_VX_NUM),dtype=np.float64)
     vx_matrix_ele = np.zeros(MAX_VX_NUM, dtype=np.float64)
 
-    l = 20 #initial length of opstring and related arrays
+    l = 5 #initial length of opstring and related arrays
     opstring = np.zeros(l,dtype=np.int64) 
     vert = np.zeros(l,dtype=np.int64)
     link = np.zeros(4*l,dtype=np.int64)
     num_op = 0
     t_loop_len = 5
-    d_Loop_len = 5
+    d_loop_len = 5
+    num_opers_t = 0
+    num_opers_d = 0
+    num_loops_t = 0
+    num_loops_d = 0
     ns_to_iq = np.zeros((4,4),dtype=np.int64)
     iq_to_ns = np.zeros((2,MAX_BOND_NUM),dtype=np.int64)
 
@@ -66,12 +70,17 @@ class mc_sse_dimer:
 
     nvx = 0 #counter for num of vertices
 
-    def __init__(self,j1,j2,beta,nx):
+    def __init__(self,j1,j2,beta,nx,equil_steps = 1e5, mc_steps = 1e5, num_runs = 10):
 
         # Hamiltonian parameters
         self.j1 = j1
         self.j2 = j2
         self.beta = beta
+
+        #MC parameters
+        self.equil_steps = equil_steps
+        self.mc_steps = mc_steps
+        self.num_runs = num_runs
 
         # lattice parameters
         self.nx = nx
@@ -84,8 +93,8 @@ class mc_sse_dimer:
         self.cords_of_site = np.zeros((2,self.nn),dtype=np.int64) #given site number, what is the coordinates 
         self.site_of_cords = np.zeros((self.nx,self.ny),dtype=np.int64) #given coordinates, what is the site number 
         self.bond = np.zeros((2,self.nb+1),dtype=np.int64) #index bond from 1 to nb (inclusive)
-        self.first = np.zeros(self.nn,dtype=int)
-        self.last = np.zeros(self.nn, dtype=int)
+        self.first = np.zeros(self.nn,dtype=np.int64)
+        self.last = np.zeros(self.nn, dtype=np.int64)
 
         np.random.seed(int(time.time())) #set random seed when constructor called
 
@@ -176,13 +185,13 @@ class mc_sse_dimer:
             s1 = self.iq_to_ns[0,iq]
             s2 = self.iq_to_ns[1,iq]
             self.wgt[iq] = 0.5 * (self.j1 + self.j2) * self.tz_wgt[s1] * self.tz_wgt[s2] 
-            self.wgt[iq] += (0.5 * self.act_t2[s1] - 3/4) + (0.5*self.act_t2[s2] - 3/4)        
+            self.wgt[iq] += (0.5 * self.t2_wgt[s1] - 3/4) + (0.5*self.t2_wgt[s2] - 3/4)    
             if self.wgt[iq] > max_wgt:
                 max_wgt = self.wgt[iq]
 
-        max_wgt += 1
-        #self.wgt = np.add(self.wgt,0.5*(self.j1+self.j2))
-        #self.awgt[:] = self.wgt[:]
+        #max_wgt += 1
+        # self.wgt = np.add(self.wgt,0.5*(self.j1+self.j2))
+        # self.awgt[:] = self.wgt[:]
 
         for iq in range(self.MAX_BOND_NUM):
             self.awgt[iq] = max_wgt - self.wgt[iq]
@@ -542,6 +551,7 @@ class mc_sse_dimer:
     def linked_list(self):
 
         i = 0; i0 = 0; i1 = 1
+        self.first[:] = -1; self.last[:] = -1; self.link[:] = -1; self.vert[:] = -1
 
         for j in range(self.l):
             ii = self.opstring[j]
@@ -579,37 +589,42 @@ class mc_sse_dimer:
                 p0 = self.last[s]
                 self.link[p0] = i
                 self.link[i] = p0
-                
+
+        # print(self.opstring)
+
+        # for i in range(len(self.link)):
+        #     print("p: {0}, link[p]: {1}, vert num: {2}".format(i,self.link[i],self.vert[i//4]))
+           
     def t_loop_update(self):
 
-        ml = 100*self.l
+        #ml = 100*self.l
 
         for i in range(self.t_loop_len):
             nv = 0
-            vx0 = -1
+            vert_num0 = -1
             init_state = 0
 
-            while (init_state == 0 or init_state == -1 or vx0 == -1):
-                init_p = random.randrange(0,4*num_op)
+            while (init_state == 0 or init_state == -1 or vert_num0 == -1):
+                init_p = random.randrange(0,4*self.num_op)
                 vp0 = init_p//4
-                vert_num0 = self.vert(vp0)
+                vert_num0 = self.vert[vp0]
                 in_leg0 = init_p%4
                 init_state = self.vx_leg[in_leg0, vert_num0]
 
-            bef_init_p = self.link(init_p)
-            vx = self.vert(bef_init_p//4)
+            bef_init_p = self.link[init_p]
+            vx = self.vert[bef_init_p//4]
             in_leg = bef_init_p%4
             bef_init_state = self.vx_leg[in_leg, vx]
 
             p1 = init_p
 
-            for j in range(ml):
+            while True:
                 vp = p1//4
-                vx = self.vert(vp)
+                vx = self.vert[vp]
                 in_leg = p1%4
                 in_state = self.vx_leg[in_leg, vx]
 
-                if j==1:
+                if nv==0:
                     if init_state == 2:
                         if random.random() <= 0.5:
                             instate_aft_flip = self.act_tp[init_state]
@@ -622,15 +637,226 @@ class mc_sse_dimer:
                 else:
                     instate_aft_flip = outstate_aft_flip
 
+                if p1 == init_p:
+                    init_state = instate_aft_flip
+                elif p1 == bef_init_p:
+                    bef_init_state = instate_aft_flip
             
-            r = random.random()
-            for out_leg in range(4):
-                if r <= self.t_worm_prob[in_leg, out_leg, instate_aft_flip, vx]:
-                    new_vx = self.vx_new[in_leg, out_leg, instate_aft_flip, vx]
-                    outstate_aft_flip = self.vx_leg[out_leg, new_vx]
-                    self.vert[vp] = new_vx
+                r = random.random()
+                for out_leg in range(4):
+                    #print(self.t_worm_prob[in_leg, out_leg, instate_aft_flip, vx])
+                    if r <= self.t_worm_prob[in_leg, out_leg, instate_aft_flip, vx]:
+                        new_vx = self.vx_new[in_leg, out_leg, instate_aft_flip, vx]
+                        outstate_aft_flip = self.vx_leg[out_leg, new_vx]
+                        self.vert[vp] = new_vx
+                        break
+                    if out_leg == 3:
+                        print("didn't find a suitable outleg!") #should have reached break statement previously
+                
+                p1 = 4*vp + out_leg
+                nv += 1
+
+                if p1 == init_p:
+                    init_state = outstate_aft_flip
+                elif p1 == bef_init_p:
+                    bef_init_state = outstate_aft_flip
+                
+                if (p1 == init_p and init_state == bef_init_state) or \
+                    (p1 == bef_init_p and init_state == bef_init_state):
+                    #self.passed = True
                     break
-            
-            if out_leg == 4:
+                p1 = self.link[p1]
+
+            self.num_opers_t += nv
+            #self.passed = False
+            #return 
+
+        self.num_loops_t += self.t_loop_len
+
+    def d_loop_update(self):
+
+        #ml = 100*self.l
+
+        for i in range(self.d_loop_len):
+            nv = 0
+            vert_num0 = -1
+
+            while vert_num0 == -1:
+                init_p = random.randrange(0,4*self.num_op)
+                vp0 = init_p//4
+                vert_num0 = self.vert[vp0]
+                in_leg0 = init_p%4
+                init_state = self.vx_leg[in_leg0, vert_num0]
+
+            bef_init_p = self.link[init_p]
+            vx = self.vert[bef_init_p//4]
+            in_leg = bef_init_p%4
+            bef_init_state = self.vx_leg[in_leg, vx]
+
+            p1 = init_p
+
+            while True:
+                vp = p1//4
+                vx = self.vert[vp]
+                in_leg = p1%4
+                in_state = self.vx_leg[in_leg, vx]
+
+                if nv==0:
+                    if init_state == 0:
+                        r = random.random()
+                        if r <= 1/3:
+                            instate_aft_flip = self.act_dz[init_state]
+                        elif r <= 2/3:
+                            instate_aft_flip = self.act_dp[init_state]
+                        else:
+                            instate_aft_flip = self.act_dm[init_state]
+                    elif init_state == 1:
+                        instate_aft_flip = self.act_dp[init_state]
+                    elif init_state == 2:
+                        instate_aft_flip = self.act_dz[init_state]
+                    else:
+                        instate_aft_flip = self.act_dm[init_state]
+                else:
+                    instate_aft_flip = outstate_aft_flip
+
+                if p1 == init_p:
+                    init_state = instate_aft_flip
+                elif p1 == bef_init_p:
+                    bef_init_state = instate_aft_flip
+
+                r = random.random()
+                for out_leg in range(4):
+                    if r <= self.d_worm_prob[in_leg, out_leg, instate_aft_flip, vx]:
+                        new_vx = self.vx_new[in_leg, out_leg, instate_aft_flip, vx]
+                        outstate_aft_flip = self.vx_leg[out_leg, new_vx]
+                        self.vert[vp] = new_vx
+                        break
+                    if out_leg == 3:
+                        print("didn't find a suitable outleg!") #should have reached break statement previously
+                    
+                p1 = 4*vp + out_leg
+                nv += 1
+
+                if p1 == init_p:
+                    init_state = outstate_aft_flip
+                elif p1 == bef_init_p:
+                    bef_init_state = outstate_aft_flip
+                
+                if (p1 == init_p and init_state == bef_init_state) or \
+                    (p1 == bef_init_p and init_state == bef_init_state):
+                    #self.passed = True
+                    break
+                p1 = self.link[p1]
+
+            self.num_opers_d += nv
+            #self.passed = False
+            #return 
+
+        self.num_loops_d += self.d_loop_len
+
+    def aft_loop_update(self):
+
+        j=0
+        for i in range(self.l):
+            if self.opstring[i] != 0:
+                self.opstring[i] = 6*(self.opstring[i]//6) + self.oper_from_vx_num[self.vert[j]]
+                j += 1
+        
+        for i in range(self.nn):
+            if self.first[i] != -1:
+                in_leg = self.first[i]%2
+                vp = self.first[i]//4
+                self.state[i] = self.vx_leg[in_leg,self.vert[vp]]
+                if self.state[i] != 0 and self.state[i] != 1 \
+                    and self.state[i] != 2 and self.state[i] != 3:
+                    print("wrong state!")
+                
+            else:
+                r = random.random()
+                if r <= 1/4:
+                    self.state[i] = 0
+                elif r <= 1/2:
+                    self.state[i] = 1
+                elif r <= 3/4:
+                    self.state[i] = 2
+                else:
+                    self.state[i] = 3
+
+    def adjust_trun_cutoff(self):
+
+        temp_opstring = np.copy(self.opstring)
+        dl = self.l/10 + 2
+        if self.num_op < l-dl/2:
+            return
+        old_l = self.l
+        self.l = self.l + dl
+
+        self.opstring = np.zeros(self.l,dtype=np.int64)
+        self.opstring[:old_l] = temp_opstring[:]
+
+        self.vert = np.zeros(self.l,dtype=np.int64)
+        self.link = np.zeros(4*self.l,dtype=np.int64)
+
+    def adjust_loop_len(self):
+
+        avg_op_per_loop_t = self.num_loops_t/self.num_oper_t
+        nl = 1+int(2*self.l/avg_op_per_loop_t)
+        self.t_loop_len = int((self.t_loop_len+nl)/2)
+
+        avg_op_per_loop_d = self.num_loops_d/self.num_oper_d
+        nl = 1+int(2*self.l/avg_op_per_loop_d)
+        self.d_loop_len = int((self.d_loop_len+nl)/2)
+
+    def write_observables(self):
+
+        energy = -self.num_op_for_energy/(self.mc_steps * self.beta)
+        energy += (self.amax * self.nb) #diagonal shift
+        energy /= self.nn #energy per dimer
+
+        file = open('energy.txt','a')
+        file.write(str(energy)+'\n')
+        file.close()
+
+    def set_zero(self):
+
+        self.num_opers_t = 0
+        self.num_loops_t = 0
+        self.num_opers_d = 0
+        self.num_loops_d = 0
+        self.num_op_for_energy = 0
+
+    def one_mc_step(self):
+        self.diagonal_update()
+        self.linked_list()
+        self.t_loop_update()
+        self.d_loop_update()
+        self.aft_loop_update()
+
+    def equilibration(self):
+        with open('log.txt','a') as file:
+            file.write('Starting equilibration\n')
+
+        for i in range(self.mc_steps):
+            self.one_mc_step()
+            self.adjust_trun_cutoff()
+            if i%(self.mc_steps//20) == 0: #call it 20 times
+                self.adjust_loop_len()
+                self.set_zero()
+
+        with open('log.txt','a') as file:
+            file.write('Completed equilibration. L = {0}, t loop len = \
+                {1}, d loop len = {2}\n'.format(self.l,self.t_loop_len, self.d_loop_len))
+
+    def main_mc_runs(self):
+
+        for i in self.num_runs():
+            with open('log.txt','a') as file:
+                file.write('Starting run ', i,'\n')
+            self.set_zero()
+            for j in range(self.mc_steps):
+                self.one_mc_step()
+            self.write_observables()
+            with open('log.txt','a') as file:
+                file.write('Starting run ', i,'\n')
                 
             

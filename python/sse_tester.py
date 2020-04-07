@@ -10,3 +10,6 @@ if __name__ == "__main__":
     test.initvrtx()
     test.diagonal_update()
     test.linked_list()
+    test.t_loop_update()
+    test.d_loop_update()
+    test.aft_loop_update()
