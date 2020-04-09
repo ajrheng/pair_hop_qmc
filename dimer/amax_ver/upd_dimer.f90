@@ -45,8 +45,8 @@ use hyzer; implicit none
 
 integer :: i,ii,k,q,o,iiq,jjq
 integer :: ns(0:1)
-real(8) :: rndm,p,addp,delp, dl, num_op
-integer :: nu,nk,nh1,last
+real(8) :: rndm,p,addp,delp, dl
+integer :: nu,nk,nh1,last, num_op
 
 nu=0;nk=0!nu=number of diagonal operators, nk=number of off-diagonal operators
 last=0;nh1=0
