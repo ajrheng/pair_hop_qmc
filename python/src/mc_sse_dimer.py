@@ -100,6 +100,10 @@ class mc_sse_dimer:
 
         np.random.seed(int(time.time())) #set random seed when constructor called
 
+        with open('log.txt','a') as file:
+            file.write("Parameters for this run: J = {0}, J2 = {1}, L = {2}, beta = {3}\n"\
+                .format(self.j1, self.j2, self.nx, self.beta)) 
+
     def init_state(self):
         for i in range(len(self.state)):
             self.state[i] = np.random.randint(4) #initializing initial state of lattice
@@ -835,8 +839,11 @@ class mc_sse_dimer:
     def write_observables(self):
 
         energy = -self.num_op_for_energy/(self.mc_steps * self.beta)
+        print('self.num_op_for_energy/(self.mc_steps * self.beta): ', self.num_op_for_energy/(self.mc_steps * self.beta))
         energy += (self.max_wgt * self.nb) #diagonal shift
+        print('(self.max_wgt * self.nb)', (self.max_wgt * self.nb))
         energy /= self.nn #energy per dimer
+        print('final energy: ', energy)
 
         file = open('energy.txt','a')
         file.write(str(energy)+'\n')
