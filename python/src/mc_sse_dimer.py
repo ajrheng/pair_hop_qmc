@@ -72,7 +72,7 @@ class mc_sse_dimer:
     nvx = 0 #counter for num of vertices
     passed = False 
 
-    def __init__(self,j1,j2,beta,nx,equil_steps = 10000, mc_steps = 10000, num_runs = 10):
+    def __init__(self,j1,j2,beta,L,equil_steps = 10000, mc_steps = 10000, num_runs = 10):
 
         # Hamiltonian parameters
         self.j1 = j1
@@ -85,8 +85,8 @@ class mc_sse_dimer:
         self.num_runs = num_runs
 
         # lattice parameters
-        self.nx = nx
-        self.ny = nx #square lattice
+        self.nx = L
+        self.ny = L #square lattice
         self.nn = self.nx * self.ny
         self.nb = 2 * self.nn
 
@@ -101,8 +101,8 @@ class mc_sse_dimer:
         np.random.seed(int(time.time())) #set random seed when constructor called
 
         with open('log.txt','a') as file:
-            file.write("Parameters for this run: J = {0}, J2 = {1}, L = {2}, beta = {3}\n"\
-                .format(self.j1, self.j2, self.nx, self.beta)) 
+            file.write("Parameters for this run: J = {0}, J2 = {1}, beta = {2}, L = {3}\n"\
+                .format(self.j1, self.j2, self.beta, self.nx)) 
 
     def init_state(self):
         for i in range(len(self.state)):
@@ -839,11 +839,8 @@ class mc_sse_dimer:
     def write_observables(self):
 
         energy = -self.num_op_for_energy/(self.mc_steps * self.beta)
-        print('self.num_op_for_energy/(self.mc_steps * self.beta): ', self.num_op_for_energy/(self.mc_steps * self.beta))
         energy += (self.max_wgt * self.nb) #diagonal shift
-        print('(self.max_wgt * self.nb)', (self.max_wgt * self.nb))
         energy /= self.nn #energy per dimer
-        print('final energy: ', energy)
 
         file = open('energy.txt','a')
         file.write(str(energy)+'\n')
@@ -880,8 +877,8 @@ class mc_sse_dimer:
             #print("equilibration step ", i)
             self.one_mc_step()
             self.adjust_trun_cutoff()
-            if i%(self.mc_steps//20) == 0: #call it 20 times
-                self.write_conf(0)
+            # if i%(self.mc_steps//20) == 0: #call it 20 times
+            #     self.write_conf(0)
                 #self.adjust_loop_len()
                 #self.set_zero()
 
@@ -892,7 +889,7 @@ class mc_sse_dimer:
     def write_conf(self,i):
     
         with open('conf.txt','a') as file:
-            file.write("Config for run: "+ str(i)+'\n')
+            file.write("Config for run: "+ str(i+1)+'\n')
             for i in range(self.nn):
                 file.write(str(self.state[i])+" ")
                 if (i+1)%self.nx == 0:
