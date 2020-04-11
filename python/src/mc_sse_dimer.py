@@ -40,8 +40,8 @@ class mc_sse_dimer:
     vert = np.zeros(l,dtype=np.int64)
     link = np.zeros(4*l,dtype=np.int64)
     num_op = 0
-    t_loop_len = 100
-    d_loop_len = 100
+    t_loop_len = 20
+    d_loop_len = 20
     num_opers_t = 0
     num_opers_d = 0
     num_loops_t = 0
@@ -526,7 +526,7 @@ class mc_sse_dimer:
                 ns1 = self.state[self.bond[1,b]]
                 iq = self.ns_to_iq[ns0,ns1]
                 accept_prob = self.awgt[iq]*self.beta*self.nb/(self.l-self.num_op)
-                if accept_prob >= 1 or random.random() <= accept_prob:
+                if accept_prob >= 1 or random.random() < accept_prob: #no <= for second comparison so 0 is rejected
                     self.opstring[i] = 6 * b
                     self.num_op += 1
 
@@ -536,7 +536,7 @@ class mc_sse_dimer:
                 ns1 = self.state[self.bond[1,b]]
                 iq = self.ns_to_iq[ns0,ns1]
                 accept_prob = self.dwgt[iq]*(self.l - self.num_op + 1)/(self.beta*self.nb)
-                if accept_prob >= 1 or random.random() <= accept_prob:
+                if accept_prob >= 1 or random.random() < accept_prob:
                     self.opstring[i] = 0
                     self.num_op -= 1
 
@@ -570,10 +570,11 @@ class mc_sse_dimer:
                 self.state[self.bond[0,b]] = self.iq_to_ns[0,jq]
                 self.state[self.bond[1,b]] = self.iq_to_ns[1,jq]
                 if self.vert[i] == -1:
-                    print('error here, vert is -1')
-                    print('s0: {0}, s1: {1}, ns0: {2}, ns1: {3}'.format(s0,s1,ns0,ns1))
-                    print('opstring: {4}, i: {0}, o: {1}, iq: {2}, b: {3}'.format(i,o,iq,b,ii))
-                    print('state aft op: {0}, {1}'.format(self.state[self.bond[0,b]],self.state[self.bond[1,b]]))
+                    with open('error.txt','a') as file:
+                        file.write('error here, vert is -1\n')
+                        file.write('s0: {0}, s1: {1}, ns0: {2}, ns1: {3}\n'.format(s0,s1,ns0,ns1))
+                        file.write('opstring: {4}, i: {0}, o: {1}, iq: {2}, b: {3}\n'.format(i,o,iq,b,ii))
+                        file.write('state aft op: {0}, {1}\n'.format(self.state[self.bond[0,b]],self.state[self.bond[1,b]]))
                 p0 = self.last[s0]
                 p1 = self.last[s1]
                 if p0 != -1:
@@ -664,7 +665,8 @@ class mc_sse_dimer:
                         self.vert[vp] = new_vx
                         break
                     if out_leg == 3:
-                        print("didn't find a suitable outleg for t worm!") #should have reached break statement previously
+                        with open('error.txt','a') as file:
+                            file.write("didn't find a suitable outleg for t worm!\n") #should have reached break statement previously
                 
                 p1 = 4*vp + out_leg
                 nv += 1
@@ -748,7 +750,8 @@ class mc_sse_dimer:
                         self.vert[vp] = new_vx
                         break
                     if out_leg == 3:
-                        print("didn't find a suitable outleg for d worm!") #should have reached break statement previously
+                        with open('error.txt','a') as file:
+                            file.write("didn't find a suitable outleg for d worm!\n") #should have reached break statement previously
                     
                 p1 = 4*vp + out_leg
                 nv += 1
@@ -766,7 +769,7 @@ class mc_sse_dimer:
 
             self.num_opers_d += nv
             if self.passed is False:
-                print('d pass false')
+                #print('d pass false')
                 return 
 
         self.num_loops_d += self.d_loop_len
@@ -786,7 +789,8 @@ class mc_sse_dimer:
                 self.state[i] = self.vx_leg[in_leg,self.vert[vp]]
                 if self.state[i] != 0 and self.state[i] != 1 \
                     and self.state[i] != 2 and self.state[i] != 3:
-                    print("wrong state!")
+                    with open('error.txt','a') as file:
+                        file.write("wrong state!\n")
                 
             else:
                 r = random.random()
@@ -833,8 +837,8 @@ class mc_sse_dimer:
             self.d_loop_len = int((self.d_loop_len+nl)/2)
         except ZeroDivisionError:
             pass
-
-        print("new t and d loop lens are {0} and {1}".format(self.t_loop_len,self.d_loop_len))
+        with open('log.txt','a') as file:
+            file.write("new t and d loop lens are {0} and {1}\n".format(self.t_loop_len,self.d_loop_len))
 
     def write_observables(self):
 

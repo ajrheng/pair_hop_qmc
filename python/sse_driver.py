@@ -8,7 +8,7 @@ from mc_sse_dimer import *
 
 if __name__ == "__main__":
 
-    param = np.loadtxt('param.txt')
+    param = np.loadtxt('params.txt')
     if len(param) != 4:
         sys.exit("insufficient parameters")
 
