@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from shutil import copy
+import time
 
 j2 = 0
 beta = 10
@@ -25,5 +26,6 @@ for j in np.arange(0,2,0.2):
     file.close()
 
     os.system('qsub script.sh')
+    time.sleep(1) #to ensure current time seed is different for different simulations
 
     os.chdir(cwd)

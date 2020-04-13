@@ -40,8 +40,8 @@ class mc_sse_dimer:
     vert = np.zeros(l,dtype=np.int64)
     link = np.zeros(4*l,dtype=np.int64)
     num_op = 0
-    t_loop_len = 20
-    d_loop_len = 20
+    t_loop_len = 50
+    d_loop_len = 50
     num_opers_t = 0
     num_opers_d = 0
     num_loops_t = 0
@@ -72,7 +72,7 @@ class mc_sse_dimer:
     nvx = 0 #counter for num of vertices
     passed = False 
 
-    def __init__(self,j1,j2,beta,L,equil_steps = 10000, mc_steps = 10000, num_runs = 10):
+    def __init__(self,j1,j2,beta,L,equil_steps = 50000, mc_steps = 10000, num_runs = 10):
 
         # Hamiltonian parameters
         self.j1 = j1
@@ -98,7 +98,7 @@ class mc_sse_dimer:
         self.first = np.zeros(self.nn,dtype=np.int64)
         self.last = np.zeros(self.nn, dtype=np.int64)
 
-        np.random.seed(int(time.time())) #set random seed when constructor called
+        random.seed(int(time.time())) #set random seed when constructor called
 
         with open('log.txt','a') as file:
             file.write("Parameters for this run: J = {0}, J2 = {1}, beta = {2}, L = {3}\n"\
@@ -106,8 +106,7 @@ class mc_sse_dimer:
 
     def init_state(self):
         for i in range(len(self.state)):
-            self.state[i] = np.random.randint(4) #initializing initial state of lattice
-            #putting 2 ensures between 0 and 3 are generated
+            self.state[i] = random.choice([0,1,2,3]) #initializing initial state of lattice
 
     def lattice(self):
         i = 0
@@ -144,44 +143,44 @@ class mc_sse_dimer:
             self.iq_to_ns[1,iq] = ns1
 
     def init_matrix_ele(self):
-       
-       self.dz_wgt[0] = 1
-       self.dp_wgt[0] = np.sqrt(2)
-       self.dm_wgt[0] = np.sqrt(2)
 
-       self.tz_wgt[1] = -1
-       self.tp_wgt[1] = np.sqrt(2)
-       self.dp_wgt[1] = np.sqrt(2)
-       self.t2_wgt[1] = 2
+        self.dz_wgt[0] = 1
+        self.dp_wgt[0] = np.sqrt(2)
+        self.dm_wgt[0] = np.sqrt(2)
 
-       self.tp_wgt[2] = np.sqrt(2)
-       self.tm_wgt[2] = np.sqrt(2)
-       self.dz_wgt[2] = 1
-       self.t2_wgt[2] = 2
+        self.tz_wgt[1] = -1
+        self.tp_wgt[1] = np.sqrt(2)
+        self.dp_wgt[1] = np.sqrt(2)
+        self.t2_wgt[1] = 2
 
-       self.tz_wgt[3] = 1
-       self.tm_wgt[3] = np.sqrt(2)
-       self.dm_wgt[3] = np.sqrt(2)
-       self.t2_wgt[3] = 2
+        self.tp_wgt[2] = np.sqrt(2)
+        self.tm_wgt[2] = np.sqrt(2)
+        self.dz_wgt[2] = 1
+        self.t2_wgt[2] = 2
 
-       self.act_dz[0] = 2
-       self.act_dp[0] = 3
-       self.act_dm[0] = 1
+        self.tz_wgt[3] = 1
+        self.tm_wgt[3] = np.sqrt(2)
+        self.dm_wgt[3] = np.sqrt(2)
+        self.t2_wgt[3] = 2
 
-       self.act_tz[1] = 1
-       self.act_tp[1] = 2
-       self.act_dp[1] = 0
-       self.act_t2[1] = 1
+        self.act_dz[0] = 2
+        self.act_dp[0] = 3
+        self.act_dm[0] = 1
 
-       self.act_tp[2] = 3
-       self.act_tm[2] = 1
-       self.act_dz[2] = 0
-       self.act_t2[2] = 2
+        self.act_tz[1] = 1
+        self.act_tp[1] = 2
+        self.act_dp[1] = 0
+        self.act_t2[1] = 1
 
-       self.act_tz[3] = 3
-       self.act_tm[3] = 2
-       self.act_dm[3] = 0
-       self.act_t2[3] = 3
+        self.act_tp[2] = 3
+        self.act_tm[2] = 1
+        self.act_dz[2] = 0
+        self.act_t2[2] = 2
+
+        self.act_tz[3] = 3
+        self.act_tm[3] = 2
+        self.act_dm[3] = 0
+        self.act_t2[3] = 3
 
     def pvect0(self):
 
@@ -501,8 +500,6 @@ class mc_sse_dimer:
                         self.t_worm_prob[ic,oc,instate,i] = self.t_worm_prob[ic,oc,instate,i] + self.t_worm_prob[ic,oc-1,instate,i]
                         self.d_worm_prob[ic,oc,instate,i] = self.d_worm_prob[ic,oc,instate,i] + self.d_worm_prob[ic,oc-1,instate,i]
 
-
-        counter = 0
         for i in range(1,self.nvx+1):
             for ic in range(4):
                 for instate in range(4):
@@ -526,7 +523,7 @@ class mc_sse_dimer:
                 ns1 = self.state[self.bond[1,b]]
                 iq = self.ns_to_iq[ns0,ns1]
                 accept_prob = self.awgt[iq]*self.beta*self.nb/(self.l-self.num_op)
-                if accept_prob >= 1 or random.random() < accept_prob: #no <= for second comparison so 0 is rejected
+                if accept_prob >= 1 or random.random() < accept_prob:
                     self.opstring[i] = 6 * b
                     self.num_op += 1
 
@@ -571,10 +568,10 @@ class mc_sse_dimer:
                 self.state[self.bond[1,b]] = self.iq_to_ns[1,jq]
                 if self.vert[i] == -1:
                     with open('error.txt','a') as file:
-                        file.write('error here, vert is -1\n')
+                        file.write('\nerror here, vert is -1\n')
                         file.write('s0: {0}, s1: {1}, ns0: {2}, ns1: {3}\n'.format(s0,s1,ns0,ns1))
                         file.write('opstring: {4}, i: {0}, o: {1}, iq: {2}, b: {3}\n'.format(i,o,iq,b,ii))
-                        file.write('state aft op: {0}, {1}\n'.format(self.state[self.bond[0,b]],self.state[self.bond[1,b]]))
+                        file.write('state aft op: {0}, {1}\n\n'.format(self.state[self.bond[0,b]],self.state[self.bond[1,b]]))
                 p0 = self.last[s0]
                 p1 = self.last[s1]
                 if p0 != -1:
@@ -602,17 +599,17 @@ class mc_sse_dimer:
 
         # for i in range(len(self.link)):
         #     print("p: {0}, link[p]: {1}, vert num: {2}".format(i,self.link[i],self.vert[i//4]))
-           
+
     def t_loop_update(self):
 
         ml = 50*self.l
 
-        for i in range(self.t_loop_len):
+        for _ in range(self.t_loop_len):
             nv = 0
             vert_num0 = -1
             init_state = -1
 
-            while (init_state == -1 or vert_num0 == -1):
+            while init_state == -1 or vert_num0 == -1:
                 init_p = random.randrange(0,4*self.num_op)
                 vp0 = init_p//4
                 vert_num0 = self.vert[vp0]
@@ -630,20 +627,21 @@ class mc_sse_dimer:
             p1 = init_p
             self.passed = False
         
-            for _ in range(ml):
+            for i in range(ml):
                 vp = p1//4
                 vx = self.vert[vp]
                 in_leg = p1%4
                 in_state = self.vx_leg[in_leg, vx]
 
-                if nv==0:
+                if i==0:
                     if init_state == 0:
                         break
                     elif init_state == 2:
-                        if random.random() <= 0.5:
-                            instate_aft_flip = self.act_tp[init_state]
-                        else:
-                            instate_aft_flip = self.act_tm[init_state]
+                        instate_aft_flip = random.choice([self.act_tp[init_state], self.act_tm[init_state]])
+                        # if random.random() <= 0.5:
+                        #     instate_aft_flip = self.act_tp[init_state]
+                        # else:
+                        #     instate_aft_flip = self.act_tm[init_state]
                     elif init_state == 1:
                         instate_aft_flip = self.act_tp[init_state]
                     else:
@@ -693,7 +691,7 @@ class mc_sse_dimer:
 
         ml = 50*self.l
 
-        for i in range(self.d_loop_len):
+        for _ in range(self.d_loop_len):
             nv = 0
             vert_num0 = -1
             init_state = -1
@@ -713,21 +711,23 @@ class mc_sse_dimer:
             p1 = init_p
             self.passed = False
 
-            for _ in range(ml):
+            for i in range(ml):
                 vp = p1//4
                 vx = self.vert[vp]
                 in_leg = p1%4
                 in_state = self.vx_leg[in_leg, vx]
 
-                if nv==0:
+                if i==0:
                     if init_state == 0:
-                        r = random.random()
-                        if r <= 1/3:
-                            instate_aft_flip = self.act_dz[init_state]
-                        elif r <= 2/3:
-                            instate_aft_flip = self.act_dp[init_state]
-                        else:
-                            instate_aft_flip = self.act_dm[init_state]
+                        instate_aft_flip = random.choice([self.act_dz[init_state],self.act_dp[init_state],\
+                            self.act_dm[init_state]])
+                        # r = random.random()
+                        # if r <= 1/3:
+                        #     instate_aft_flip = self.act_dz[init_state]
+                        # elif r <= 2/3:
+                        #     instate_aft_flip = self.act_dp[init_state]
+                        # else:
+                        #     instate_aft_flip = self.act_dm[init_state]
                     elif init_state == 1:
                         instate_aft_flip = self.act_dp[init_state]
                     elif init_state == 2:
@@ -787,21 +787,14 @@ class mc_sse_dimer:
                 in_leg = self.first[i]%2
                 vp = self.first[i]//4
                 self.state[i] = self.vx_leg[in_leg,self.vert[vp]]
-                if self.state[i] != 0 and self.state[i] != 1 \
-                    and self.state[i] != 2 and self.state[i] != 3:
+                # if self.state[i] != 0 and self.state[i] != 1 \
+                #     and self.state[i] != 2 and self.state[i] != 3:
+                if self.state[i] not in [0,1,2,3]:
                     with open('error.txt','a') as file:
                         file.write("wrong state!\n")
                 
             else:
-                r = random.random()
-                if r <= 1/4:
-                    self.state[i] = 0
-                elif r <= 1/2:
-                    self.state[i] = 1
-                elif r <= 3/4:
-                    self.state[i] = 2
-                else:
-                    self.state[i] = 3
+                self.state[i] = random.choice([0,1,2,3])
 
     def adjust_trun_cutoff(self):
 
@@ -837,13 +830,14 @@ class mc_sse_dimer:
             self.d_loop_len = int((self.d_loop_len+nl)/2)
         except ZeroDivisionError:
             pass
+
         with open('log.txt','a') as file:
             file.write("new t and d loop lens are {0} and {1}\n".format(self.t_loop_len,self.d_loop_len))
 
     def write_observables(self):
 
         energy = -self.num_op_for_energy/(self.mc_steps * self.beta)
-        energy += (self.max_wgt * self.nb) #diagonal shift
+        energy += self.max_wgt * self.nb #diagonal shift
         energy /= self.nn #energy per dimer
 
         file = open('energy.txt','a')
