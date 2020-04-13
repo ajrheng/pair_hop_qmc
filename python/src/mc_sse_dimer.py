@@ -564,14 +564,14 @@ class mc_sse_dimer:
                 iq = self.ns_to_iq[ns0,ns1]
                 self.vert[i] = self.vx_num_aft_op[o,iq]
                 jq = self.op[o,iq]
-                self.state[self.bond[0,b]] = self.iq_to_ns[0,jq]
-                self.state[self.bond[1,b]] = self.iq_to_ns[1,jq]
+                self.state[s0] = self.iq_to_ns[0,jq]
+                self.state[s1] = self.iq_to_ns[1,jq]
                 if self.vert[i] == -1:
                     with open('error.txt','a') as file:
                         file.write('\nerror here, vert is -1\n')
                         file.write('s0: {0}, s1: {1}, ns0: {2}, ns1: {3}\n'.format(s0,s1,ns0,ns1))
                         file.write('opstring: {4}, i: {0}, o: {1}, iq: {2}, b: {3}\n'.format(i,o,iq,b,ii))
-                        file.write('state aft op: {0}, {1}\n\n'.format(self.state[self.bond[0,b]],self.state[self.bond[1,b]]))
+                        file.write('state aft op: {0}, {1}\n\n'.format(self.state[s0],self.state[s1]))
                 p0 = self.last[s0]
                 p1 = self.last[s1]
                 if p0 != -1:
