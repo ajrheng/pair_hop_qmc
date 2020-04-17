@@ -1,6 +1,8 @@
 import numpy as np
 import random
 import time
+import sys
+#np.set_printoptions(threshold=sys.maxsize)
 
 def get_num_from_ns(ns):
     """
@@ -29,7 +31,7 @@ class mc_sse_dimer:
     op = np.zeros((OP_NUM,MAX_VX_NUM,),dtype=np.int64)
     oper_from_vx_num = np.zeros(MAX_VX_NUM,dtype=np.int64) #vxoper
     vx_num_aft_op = np.zeros((OP_NUM,MAX_BOND_NUM),dtype=np.int64) #vxcode
-    vx_leg = np.zeros((4,MAX_VX_NUM),dtype=np.int64) 
+    vx_leg = np.zeros((4,MAX_VX_NUM),dtype=np.int64)
     vx_new = np.zeros((4,4,4,MAX_VX_NUM),dtype=np.int64)
     t_worm_prob = np.zeros((4,4,4,MAX_VX_NUM),dtype=np.float64)
     d_worm_prob = np.zeros((4,4,4,MAX_VX_NUM),dtype=np.float64)
@@ -564,6 +566,7 @@ class mc_sse_dimer:
     def linked_list(self,track_step,track_run):
 
         print('\n linked list')
+        to_exit = False
         i = 0; i0 = 0; i1 = 1
         self.first[:] = -1; self.last[:] = -1; self.link[:] = -1; self.vert[:] = -1
 
@@ -580,6 +583,7 @@ class mc_sse_dimer:
                 self.state[s0] = self.iq_to_ns[0,jq]
                 self.state[s1] = self.iq_to_ns[1,jq]
                 if self.vert[i] == -1:
+                    to_exit=True
                     with open('error.txt','a') as file:
                         file.write('error here on run {0} step {1}, vert is -1\n'.format(track_run,track_step))
                         file.write('s0: {0}, s1: {1}, ns0: {2}, ns1: {3}\n'.format(s0,s1,ns0,ns1))
@@ -608,10 +612,13 @@ class mc_sse_dimer:
                 self.link[p0] = i
                 self.link[i] = p0
 
-        print(self.opstring)
+        print('printing opstring: ', self.opstring)
 
         for i in range(len(self.link)):
             print("p: {0}, link[p]: {1}, vert num: {2}".format(i,self.link[i],self.vert[i//4]))
+
+        if to_exit is True:
+            sys.exit('exiting')
 
     def t_loop_update(self,track_step, track_run):
 
@@ -901,7 +908,7 @@ class mc_sse_dimer:
         self.num_loops_d = 0
         self.num_op_for_energy = 0
 
-    def one_mc_step(self,track_run,track_step):
+    def one_mc_step(self,track_step,track_run):
 
         self.passed = False
         while self.passed is False:
@@ -922,7 +929,7 @@ class mc_sse_dimer:
 
         for i in range(1,int(self.mc_steps)+1):
             #print("equilibration step ", i)
-            self.one_mc_step(-1,i)
+            self.one_mc_step(i,-1)
             self.adjust_trun_cutoff()
             # if i%(self.mc_steps//20) == 0: #call it 20 times
             #     self.write_conf(0)
@@ -946,13 +953,15 @@ class mc_sse_dimer:
     def main_mc_runs(self):
 
         for i in range(self.num_runs):
+            print('RUN NUMBER ', i)
 
             with open('log.txt','a') as file:
                 file.write('Starting run '+ str(i)+'\n')
             self.set_zero()
 
             for j in range(self.mc_steps):
-                self.one_mc_step(i,j)
+                print('RUN NUMBER {0} STEP NUMBER {1}'.format(i,j))
+                self.one_mc_step(j,i)
 
             self.write_observables()
 

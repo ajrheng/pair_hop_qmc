@@ -11,4 +11,4 @@
 
 ## pre-processing script
 cd $PBS_O_WORKDIR
-./16x16testBed
+./executable_file_name

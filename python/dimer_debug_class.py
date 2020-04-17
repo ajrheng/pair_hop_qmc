@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import time
+import sys
 
 def get_num_from_ns(ns):
     """
@@ -627,6 +628,12 @@ class mc_sse_dimer:
                 print('iq: {0}, jq: {1}, ns0: {2}, ns1: {3}'.format(iq,jq,self.iq_to_ns[0,jq],self.iq_to_ns[1,jq]))
 
         self.num_op_for_energy += self.num_op
+        
+        if track_step != 0:
+            if np.array_equal(self.state,self.state_copy) is False:
+                print('state: ', self.state)
+                print('state copy: ', self.state_copy)
+                sys.exit()
 
     def linked_list(self,track_step,track_run):
 
@@ -911,6 +918,8 @@ class mc_sse_dimer:
             else:
                 self.state[i] = random.choice([0,1,2,3])
                 print('i: {0}, self.state[i]: {1}'.format(i,self.state[i]))
+
+            self.state_copy = np.copy(self.state)
 
     def adjust_trun_cutoff(self):
 
