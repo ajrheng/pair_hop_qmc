@@ -5,7 +5,7 @@ do
 	
 		mkdir "mu=$i"
 		cp script.sh mu=$i
-		cp 16x16cy2001 mu=$i 
+		cp executable_file_name mu=$i 
 		cd mu=$i
 		echo 1 >> read.in
 		echo 0 >> read.in
