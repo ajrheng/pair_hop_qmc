@@ -2,7 +2,8 @@ import numpy as np
 import random
 import time
 import sys
-#np.set_printoptions(threshold=sys.maxsize)
+import os
+np.set_printoptions(threshold=sys.maxsize)
 
 def get_num_from_ns(ns):
     """
@@ -524,7 +525,8 @@ class mc_sse_dimer:
                             self.d_worm_prob[ic,oc,instate,i] = -1
 
     def diagonal_update(self,track_step,track_run):
-        print('\nentering diagonal update')
+        with open('print_curr.txt','a') as file:
+            file.write('\nentering diagonal update\n')
         for i in range(self.l):
             ii = self.opstring[i]
             if ii == 0:
@@ -548,24 +550,27 @@ class mc_sse_dimer:
                     self.num_op -= 1
 
             else:
-                print('off diagonal update for i=', i)
+                file = open('print_curr.txt','a')
+                file.write('off diagonal update for i=' + str(i) + '\n')
                 b = ii//6
                 o = ii%6
                 ns0 = self.state[self.bond[0,b]]
                 ns1 = self.state[self.bond[1,b]]
-                print('before the update, b: {0}, o: {1}, ns0: {2}, ns1:{3}'.format(b,o,ns0,ns1))
+                file.write('before the update, b: {0}, o: {1}, ns0: {2}, ns1:{3} \n'.format(b,o,ns0,ns1))
                 iq = self.ns_to_iq[ns0,ns1]
                 jq = self.op[o,iq]
                 self.state[self.bond[0,b]] = self.iq_to_ns[0,jq]
                 self.state[self.bond[1,b]] = self.iq_to_ns[1,jq]
-                print('after the update')
-                print('iq: {0}, jq: {1}, ns0: {2}, ns1: {3}'.format(iq,jq,self.iq_to_ns[0,jq],self.iq_to_ns[1,jq]))
+                file.write('after the update\n')
+                file.write('iq: {0}, jq: {1}, ns0: {2}, ns1: {3}\n\n'.format(iq,jq,self.iq_to_ns[0,jq],self.iq_to_ns[1,jq]))
+                file.close()
 
         self.num_op_for_energy += self.num_op
 
     def linked_list(self,track_step,track_run):
 
-        print('\n linked list')
+        with open('print_curr.txt','a') as file:
+            file.write('\n linked list\n')
         to_exit = False
         i = 0; i0 = 0; i1 = 1
         self.first[:] = -1; self.last[:] = -1; self.link[:] = -1; self.vert[:] = -1
@@ -612,18 +617,23 @@ class mc_sse_dimer:
                 self.link[p0] = i
                 self.link[i] = p0
 
-        print('printing opstring: ', self.opstring)
+        with open('print_curr.txt','a') as file:
+            file.write('printing opstring: ')
+            for i in range(len(self.opstring)):
+                file.write(str(self.opstring[i]) + ' ')
+            file.write('\n')
 
-        for i in range(len(self.link)):
-            print("p: {0}, link[p]: {1}, vert num: {2}".format(i,self.link[i],self.vert[i//4]))
+            for i in range(len(self.link)):
+                file.write("p: {0}, link[p]: {1}, vert num: {2}\n".format(i,self.link[i],self.vert[i//4]))
 
         if to_exit is True:
             sys.exit('exiting')
 
     def t_loop_update(self,track_step, track_run):
 
+        file = open('print_curr.txt','a')
         ml = 50*self.l
-        print('beginning t loop update')
+        file.write('\nbeginning t loop update\n')
 
         for _ in range(self.t_loop_len):
             nv = 0
@@ -637,8 +647,8 @@ class mc_sse_dimer:
                 in_leg0 = init_p%4
                 init_state = self.vx_leg[in_leg0, vert_num0]
                 if (init_state == -1 or vert_num0 == -1):
-                    print(init_p, vp0, vert_num0, in_leg0, init_state)
-            print('out of while')
+                    file.write(init_p, vp0, vert_num0, in_leg0, init_state)
+            file.write('out of while\n')
 
             bef_init_p = self.link[init_p]
             vx = self.vert[bef_init_p//4]
@@ -648,11 +658,11 @@ class mc_sse_dimer:
             p1 = init_p
             self.passed = False
 
-            print('init_p: {0}, in_leg0: {1}, init_state: {2}'.format(init_p, in_leg0, init_state))
-            print('bef_init_p: {0}, bef_in_leg: {1}, bef_init_state: {2}'.format(bef_init_p,in_leg,bef_init_state))
+            file.write('init_p: {0}, in_leg0: {1}, init_state: {2}\n'.format(init_p, in_leg0, init_state))
+            file.write('bef_init_p: {0}, bef_in_leg: {1}, bef_init_state: {2}\n'.format(bef_init_p,in_leg,bef_init_state))
         
             for i in range(ml):
-                print('\nbeginning t subloop number ' + str(i))
+                file.write('\nbeginning t subloop number ' + str(i) +'\n')
                 vp = p1//4
                 vx = self.vert[vp]
                 in_leg = p1%4
@@ -660,7 +670,7 @@ class mc_sse_dimer:
 
                 if i==0:
                     if init_state == 0:
-                        print('t loop didnt enter')
+                        file.write('t loop didnt enter\n')
                         break
                     elif init_state == 2:
                         instate_aft_flip = random.choice([self.act_tp[init_state], self.act_tm[init_state]])
@@ -675,7 +685,7 @@ class mc_sse_dimer:
                 else:
                     instate_aft_flip = outstate_aft_flip
 
-                print('this vertex, vp = {0}, nvx = {1}, in_leg = {2}, instate_aft_flip: {3}'.format(vp,vx,in_leg,\
+                file.write('this vertex, vp = {0}, nvx = {1}, in_leg = {2}, instate_aft_flip: {3}\n'.format(vp,vx,in_leg,\
                     instate_aft_flip))
 
                 if p1 == init_p:
@@ -683,7 +693,7 @@ class mc_sse_dimer:
                 elif p1 == bef_init_p:
                     bef_init_state = instate_aft_flip
                 
-                print('init_state: {0}, bef_init_state: {1}'.format(init_state, bef_init_state))
+                file.write('init_state: {0}, bef_init_state: {1}\n'.format(init_state, bef_init_state))
 
                 r = random.random()
                 for out_leg in range(4):
@@ -700,7 +710,7 @@ class mc_sse_dimer:
                 p1 = 4*vp + out_leg
                 nv += 1
 
-                print('out_leg: {0}, new_vx = {1}, outstate_aft_flip = {2}\n'.format(out_leg, new_vx,\
+                file.write('out_leg: {0}, new_vx = {1}, outstate_aft_flip = {2}\n'.format(out_leg, new_vx,\
                     outstate_aft_flip))
 
                 if p1 == init_p:
@@ -711,22 +721,25 @@ class mc_sse_dimer:
                 if (p1 == init_p and init_state == bef_init_state) or \
                     (p1 == bef_init_p and init_state == bef_init_state):
                     self.passed = True
-                    print('loop closed')
+                    file.write('loop closed\n')
                     break
                 p1 = self.link[p1]
-                print('going to p1: ', p1)
+                file.write('going to p1: ' + str(p1) + '\n')
 
             self.num_opers_t += nv
             if self.passed is False:
-                print('t pass false')
+                file.write('t pass false')
+                file.close()
                 return 
 
         self.num_loops_t += self.t_loop_len
+        file.close()
 
     def d_loop_update(self,track_step, track_run):
 
+        file = open('print_curr.txt','a')
         ml = 50*self.l
-        print('beginning d loop update')
+        file.write('\nbeginning d loop update\n')
 
         for _ in range(self.d_loop_len):
             nv = 0
@@ -739,7 +752,7 @@ class mc_sse_dimer:
                 vert_num0 = self.vert[vp0]
                 in_leg0 = init_p%4
                 init_state = self.vx_leg[in_leg0, vert_num0]
-            print('out of while')
+            file.write('out of while\n')
 
             bef_init_p = self.link[init_p]
             vx = self.vert[bef_init_p//4]
@@ -749,11 +762,11 @@ class mc_sse_dimer:
             p1 = init_p
             self.passed = False
 
-            print('init_p: {0}, in_leg0: {1}, init_state: {2}'.format(init_p, in_leg0, init_state))
-            print('bef_init_p: {0}, bef_in_leg: {1}, bef_init_state: {2}'.format(bef_init_p,in_leg,bef_init_state))
+            file.write('init_p: {0}, in_leg0: {1}, init_state: {2}\n'.format(init_p, in_leg0, init_state))
+            file.write('bef_init_p: {0}, bef_in_leg: {1}, bef_init_state: {2}\n'.format(bef_init_p,in_leg,bef_init_state))
 
             for i in range(ml):
-                print('\nbeginning d subloop number ' + str(i))
+                file.write('\nbeginning d subloop number ' + str(i) + '\n')
                 vp = p1//4
                 vx = self.vert[vp]
                 in_leg = p1%4
@@ -779,7 +792,7 @@ class mc_sse_dimer:
                 else:
                     instate_aft_flip = outstate_aft_flip
 
-                print('this vertex, vp = {0}, nvx = {1}, in_leg = {2}, instate_aft_flip: {3}'.format(vp,vx,in_leg,\
+                file.write('this vertex, vp = {0}, nvx = {1}, in_leg = {2}, instate_aft_flip: {3}\n'.format(vp,vx,in_leg,\
                     instate_aft_flip))
 
                 if p1 == init_p:
@@ -787,7 +800,7 @@ class mc_sse_dimer:
                 elif p1 == bef_init_p:
                     bef_init_state = instate_aft_flip
 
-                print('init_state: {0}, bef_init_state: {1}'.format(init_state, bef_init_state))
+                file.write('init_state: {0}, bef_init_state: {1}\n'.format(init_state, bef_init_state))
 
                 r = random.random()
                 for out_leg in range(4):
@@ -803,7 +816,7 @@ class mc_sse_dimer:
                 p1 = 4*vp + out_leg
                 nv += 1
 
-                print('out_leg: {0}, new_vx = {1}, outstate_aft_flip = {2}, new_p1: {3}\n'.format(out_leg, new_vx,\
+                file.write('out_leg: {0}, new_vx = {1}, outstate_aft_flip = {2}, new_p1: {3}\n'.format(out_leg, new_vx,\
                     outstate_aft_flip, p1))
 
                 if p1 == init_p:
@@ -814,34 +827,40 @@ class mc_sse_dimer:
                 if (p1 == init_p and init_state == bef_init_state) or \
                     (p1 == bef_init_p and init_state == bef_init_state):
                     self.passed = True
-                    print('loop closed')
+                    file.write('loop closed\n')
                     break
                 p1 = self.link[p1]
-                print('going to p1: ', p1)
+                file.write('going to p1: '+ str(p1) + '\n')
 
             self.num_opers_d += nv
             if self.passed is False:
-                print('d pass false')
+                file.write('d pass false\n')
+                file.close()
                 return 
 
         self.num_loops_d += self.d_loop_len
+        file.close()
 
     def update_opstring(self,track_step,track_run):
-        print('\nupdate_opstring')
+        file = open('print_curr.txt','a')
+        file.write('\nupdate_opstring\n')
         j=0
         for i in range(self.l):
             if self.opstring[i] != 0:
                 self.opstring[i] = 6*(self.opstring[i]//6) + self.oper_from_vx_num[self.vert[j]]
                 j += 1
 
-        print('new opstring ', self.opstring)
+        file.write('printing opstring: ')
+        for i in range(len(self.opstring)):
+            file.write(str(self.opstring[i]) + ' ')
+        file.write('\n')
         
         for i in range(self.nn):
             if self.first[i] != -1:
                 in_leg = self.first[i]%2
                 vp = self.first[i]//4
                 self.state[i] = self.vx_leg[in_leg,self.vert[vp]]
-                print('i: {0}, in_leg: {1}, vp: {2}, self.state[i]: {3}'.format(i,in_leg,vp,self.state[i]))
+                file.write('i: {0}, in_leg: {1}, vp: {2}, self.state[i]: {3}\n'.format(i,in_leg,vp,self.state[i]))
                 # if self.state[i] != 0 and self.state[i] != 1 \
                 #     and self.state[i] != 2 and self.state[i] != 3:
                 if self.state[i] not in [0,1,2,3]:
@@ -850,12 +869,12 @@ class mc_sse_dimer:
                 
             else:
                 self.state[i] = random.choice([0,1,2,3])
-                print('i: {0}, self.state[i]: {1}'.format(i,self.state[i]))
+                file.write('i: {0}, self.state[i]: {1}\n'.format(i,self.state[i]))
 
     def adjust_trun_cutoff(self):
 
         temp_opstring = np.copy(self.opstring)
-        dl = int(self.l/10) + 2
+        dl = int(self.l/15) + 2
         if self.num_op < self.l-dl/2:
             return
         old_l = self.l
@@ -910,18 +929,17 @@ class mc_sse_dimer:
 
     def one_mc_step(self,track_step,track_run):
 
-        self.passed = False
+        self.passed = False #allow to enter while loop in replacement of do while
         while self.passed is False:
             self.diagonal_update(track_run,track_step)
-            #print('finished diagonal_update()')
             self.linked_list(track_run, track_step)
-            #print('finished linked_list()')
             self.t_loop_update(track_run,track_step)
-            #print('finished t_loop_update()')
-            self.d_loop_update(track_run, track_step)
-            #print('finished d_loopUpdate()')
-            self.update_opstring(track_run, track_step)
-            #print('finished uodate_opstring')
+
+            if self.passed is True:
+                self.d_loop_update(track_run, track_step)
+
+            if self.passed is True:
+                self.update_opstring(track_run, track_step)
 
     def equilibration(self):
         with open('log.txt','a') as file:
@@ -929,6 +947,10 @@ class mc_sse_dimer:
 
         for i in range(1,int(self.mc_steps)+1):
             #print("equilibration step ", i)
+            if os.path.exists('print_curr.txt'):
+                os.rename('print_curr.txt','print_prev.txt')
+            with open('print_curr.txt','w') as file:
+                file.write('\n=============\nEQUILIBRATION STEP NUMBER {0}\n================\n'.format(i))
             self.one_mc_step(i,-1)
             self.adjust_trun_cutoff()
             # if i%(self.mc_steps//20) == 0: #call it 20 times
@@ -953,14 +975,16 @@ class mc_sse_dimer:
     def main_mc_runs(self):
 
         for i in range(self.num_runs):
-            print('RUN NUMBER ', i)
 
             with open('log.txt','a') as file:
                 file.write('Starting run '+ str(i)+'\n')
             self.set_zero()
 
             for j in range(self.mc_steps):
-                print('RUN NUMBER {0} STEP NUMBER {1}'.format(i,j))
+                if os.path.exists('print_curr.txt'):
+                    os.rename('print_curr.txt','print_prev.txt')
+                with open('print_curr.txt','w') as file:
+                    file.write('\n=============\nRUN NUMBER {0} STEP NUMBER {1}\n================\n'.format(i,j))
                 self.one_mc_step(j,i)
 
             self.write_observables()

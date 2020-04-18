@@ -857,15 +857,11 @@ class mc_sse_dimer:
         self.passed = False
         while self.passed is False:
             self.diagonal_update()
-            #print('finished diagonal_update()')
             self.linked_list()
-            #print('finished linked_list()')
             self.t_loop_update()
-            #print('finished t_loop_update()')
             self.d_loop_update()
-            #print('finished d_loopUpdate()')
             self.update_opstring()
-            #print('finished uodate_opstring')
+
 
     def equilibration(self):
         with open('log.txt','a') as file:
