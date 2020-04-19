@@ -518,7 +518,7 @@ class mc_sse_dimer:
         for i in range(self.l):
             ii = self.opstring[i]
             if ii == 0:
-                b = random.randrange(1,self.nb+1) #note the range, randrange is not inclusive of end
+                b = random.randint(1,self.nb) #randint inclusive of end
                 ns0 = self.state[self.bond[0,b]]
                 ns1 = self.state[self.bond[1,b]]
                 iq = self.ns_to_iq[ns0,ns1]
@@ -638,10 +638,6 @@ class mc_sse_dimer:
                         break
                     elif init_state == 2:
                         instate_aft_flip = random.choice([self.act_tp[init_state], self.act_tm[init_state]])
-                        # if random.random() <= 0.5:
-                        #     instate_aft_flip = self.act_tp[init_state]
-                        # else:
-                        #     instate_aft_flip = self.act_tm[init_state]
                     elif init_state == 1:
                         instate_aft_flip = self.act_tp[init_state]
                     else:
@@ -721,13 +717,6 @@ class mc_sse_dimer:
                     if init_state == 0:
                         instate_aft_flip = random.choice([self.act_dz[init_state],self.act_dp[init_state],\
                             self.act_dm[init_state]])
-                        # r = random.random()
-                        # if r <= 1/3:
-                        #     instate_aft_flip = self.act_dz[init_state]
-                        # elif r <= 2/3:
-                        #     instate_aft_flip = self.act_dp[init_state]
-                        # else:
-                        #     instate_aft_flip = self.act_dm[init_state]
                     elif init_state == 1:
                         instate_aft_flip = self.act_dp[init_state]
                     elif init_state == 2:
@@ -856,16 +845,17 @@ class mc_sse_dimer:
 
         self.passed = False
         while self.passed is False:
+
             self.diagonal_update()
-            #print('finished diagonal_update()')
             self.linked_list()
-            #print('finished linked_list()')
             self.t_loop_update()
-            #print('finished t_loop_update()')
-            self.d_loop_update()
-            #print('finished d_loopUpdate()')
-            self.update_opstring()
-            #print('finished uodate_opstring')
+
+            if self.passed is True:
+                self.d_loop_update() #if passed t loop then do d loop
+
+            if self.passed is True:
+                self.update_opstring() #if passed t AND d loop then do this
+
 
     def equilibration(self):
         with open('log.txt','a') as file:
