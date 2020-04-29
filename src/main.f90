@@ -62,6 +62,95 @@ call simulation
 end program main
 !=============================!
 
+!=========================================!
+subroutine simulation
+!=========================================!
+use hyzer; implicit none
+
+integer :: i,j
+real(8) :: beta_store
+
+call lattice
+call pvect0
+call vxweight
+call initvrtx
+
+beta_store = beta
+beta = 1.d0
+
+if (istep.ne.0) then
+    open(12,file='log.txt',status='unknown',access='append')
+    write(12,*)'Starting equilibration.'
+    close(12)
+    lopers=0.d0
+    nloops=0.d0
+    do i=1,istep
+
+        call mcstep(0)
+        call adjstl
+        if (mod(i,istep/20).eq.0) call adjnl
+        if ((mod(i,3000)==0) .and. (beta < beta_store))  then
+            beta = beta + 1.d0
+            open(12,file='log.txt',status='unknown',access='append')
+            write(12,*)'beta= ',beta
+            close(12)
+        endif
+    enddo
+    open(12,file='log.txt',status='unknown',access='append')
+    write(12,*)'Completed equilibration: L = ',l
+    close(12)
+endif
+
+do i=1,nruns
+    open(12,file='log.txt',status='unknown',access='append')
+    write(12,*)'Starting run ',i
+    close(12)
+    call zerodata
+    do j=1,mstep
+        call mcstep(1)
+    enddo
+    call writeres(mstep)
+    call calcCorrStr(mstep)
+    call equatestg
+    open(12,file='log.txt',status='unknown',access='append')
+    write(12,*)'Completed run ',i
+    close(12)
+    open(UNIT=20,FILE='conf',STATUS='unknown',access='append')
+    write(20,*)"Run",i,"conf: "
+    call writeconf
+    close(20)
+enddo
+call writestg
+deallocate(vert)
+deallocate(link)
+
+end subroutine simulation
+!=========================!
+
+!=====================!
+subroutine mcstep (i)
+!=====================!
+
+implicit none
+
+integer :: i
+logical :: passed
+
+if(i.eq.0)then
+1   call dupdate
+    call linkoper
+    call updloop(passed)
+    if (.not.passed) goto 1
+else
+2   call dupdate
+    call linkoper
+    call updloop(passed)
+    if (.not.passed) goto 2
+endif
+
+end subroutine mcstep
+!=====================!
+
 !==========================!
 subroutine writeres (nmsr)
 !==========================!
@@ -269,34 +358,6 @@ close(10)
 
 end subroutine read_params
 !===================================!
-
-!======================================================!
-subroutine initran
-!======================================================!
-use hyzer, only: iir,jjr,kkr,nnr;   implicit none
-
-integer :: is,js,ks,ls
-real(8) ::    rndm
-
-open(10,file='rand.in',status='old')
-read(10,*)is
-read(10,*)js
-read(10,*)ks
-read(10,*)ls
-close(10)
-iir=1+abs(is)
-jjr=1+abs(js)
-kkr=1+abs(ks)
-nnr=ls
-open(10,file='rand.in',status='unknown')
-write(10,*)abs(nint((rndm()-.5)/.23283064e-9))
-write(10,*)abs(nint((rndm()-.5)/.23283064e-9))
-write(10,*)abs(nint((rndm()-.5)/.23283064e-9))
-write(10,*)abs(nint((rndm()-.5)/.23283064e-9))
-close(10)
-
-end subroutine initran
-!=======================================================!
 
 !======================================================!
 real(8) function rndm()
