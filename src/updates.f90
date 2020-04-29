@@ -10,30 +10,6 @@ integer,allocatable :: bnd(:),lpos(:),lvtx(:)
 end module blink
 !===============!
 
-!=====================!
-subroutine mcstep (i)
-!=====================!
-
-implicit none
-
-integer :: i
-logical :: passed
-
-if(i.eq.0)then
-1   call dupdate
-    call linkoper
-    call updloop(passed)
-    if (.not.passed) goto 1
-else
-2   call dupdate
-    call linkoper
-    call updloop(passed)
-    if (.not.passed) goto 2
-endif
-
-end subroutine mcstep
-!=====================!
-
 !==================================!
 subroutine dupdate
 !==================================!
@@ -363,23 +339,3 @@ passed=.true.
 end subroutine updloop
 !====================================!
 
-!================!
-subroutine adjnl
-!================!
-use hyzer; implicit none
-
-integer :: nl1
-
-lopers=lopers/nloops
-
-nl1=1+int(dble(2*l)/lopers)
-nl=(nl+nl1)/2
-lopers=0.d0
-nloops=0.d0
-if (nl<0) then
-    write(*,*)'nl is negative'
-    stop
-endif
-
-end subroutine adjnl
-!===================!
