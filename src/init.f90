@@ -201,9 +201,9 @@ do iq=0,15
     s2=mod(iiq,2); iiq=iiq/2
     s3=mod(iiq,2); iiq=iiq/2
     s4=mod(iiq,2); iiq=iiq/2
-    wgt(iq)= vv*dble(s1*s2 + s2*s3 + s3*s4 + s4*s1) !weight of a plaquette configuration, nn-repulsion term
+    wgt(iq)= vv*dble(s1*s2 + s2*s3 + s3*s4 + s4*s1)/2 !weight of a plaquette configuration, nn-repulsion term, divide by 2 cause 2x overcounting
     wgt(iq)= wgt(iq) + vv2*dble(s1*s3 + s2*s4) !diagonal repulsion term
-    wgt(iq)= wgt(iq) - mu*dble(s1+s2+s3+s4)/z !chemical potential term
+    wgt(iq)= wgt(iq) - mu*dble(s1+s2+s3+s4)/4 !chemical potential term, divide by 4 because 4x overcounting
     if (wgt(iq).gt.amax) amax=wgt(iq) !set a maximum weight
 enddo
 !the larger the wgt(iq), the more unfavourable it is, or the higher energy the configuration is
