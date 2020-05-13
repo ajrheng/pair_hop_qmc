@@ -3,7 +3,7 @@ module hyzer
 save
 
 integer, parameter :: nx=8, ny=8, nn=nx*ny, nq=nn, nb=2*nn, nn2=nn*nn
-real(8), parameter :: z=4.d0 ! 2*nb/nn
+!real(8), parameter :: z=4.d0 ! 2*nb/nn
 
 integer,parameter :: nvx=52, ivmax=2**8 - 1
 
